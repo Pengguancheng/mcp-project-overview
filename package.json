@@ -1,0 +1,39 @@
+{
+  "name": "mcp-project-overview",
+  "version": "1.0.0",
+  "description": "MCP Server for creyate code project file arch and summary",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
+    "prepare": "npm run format",
+    "test": "npm run build && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\"",
+    "test:inspector": "npm run build && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\"",
+    "test:dev": "npm run build && echo 'Starting MCP Inspector...' && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pengguancheng/mcp-project-overview.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Pengguancheng/mcp-project-overview/issues"
+  },
+  "homepage": "https://github.com/Pengguancheng/mcp-project-overview#readme",
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.0"
+  }
+}
