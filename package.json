@@ -32,6 +32,11 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.0"
+    "@langchain/community": "^0.3.48",
+    "@langchain/openai": "^0.5.18",
+    "@modelcontextprotocol/sdk": "^1.15.0",
+    "chromadb": "^3.0.6",
+    "dotenv": "^17.0.1",
+    "langchain": "^0.3.29"
   }
 }

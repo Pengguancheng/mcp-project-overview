@@ -11,11 +11,15 @@ This is a Node.js application built with TypeScript that implements an MCP serve
 - **Project Structure Resource**: Get a structured view of a project's file hierarchy
 - **File Analysis Tool**: Analyze the content and purpose of individual files
 - **Project Summary Tool**: Generate a comprehensive summary of a project including its structure and package information
+- **LangChain Integration**: Utilize LangChain for advanced language model capabilities
+- **Chroma Vector Database**: Store and retrieve vector embeddings for semantic search
 
 ## Prerequisites
 
 - Node.js (v18 or higher)
 - npm (v6 or higher)
+- OpenAI API key (for LangChain and vector embeddings)
+- Chroma DB server (optional, defaults to http://localhost:8000)
 
 ## Installation
 
@@ -58,6 +62,27 @@ npm run format:check
 
 The code will be automatically formatted when you install the project dependencies (via the `prepare` script).
 
+### Environment Variables
+
+For LangChain and Chroma functionality, you need to set the following environment variables:
+
+```bash
+# Required for LangChain and Chroma vector embeddings
+export OPENAI_API_KEY=your_openai_api_key
+```
+
+You can add these to your environment or create a `.env` file in the project root.
+
+### Chroma DB Setup
+
+For the vector database functionality, you need a running Chroma DB server. You can run it using Docker:
+
+```bash
+docker run -p 8000:8000 chromadb/chroma
+```
+
+Alternatively, you can install and run Chroma locally following the [official documentation](https://docs.trychroma.com/getting-started).
+
 ### Run the application
 
 ```bash
@@ -99,6 +124,24 @@ The MCP server exposes the following resources and tools:
     - `projectPath`: Path to the project root
     - `maxDepth` (optional): Maximum depth to traverse (default: 3)
 
+- **LangChain Demo**: Demonstrates LangChain integration for text generation
+  - Parameters:
+    - `prompt`: The text prompt to send to the language model
+  - Requirements:
+    - OPENAI_API_KEY environment variable must be set
+
+- **Vector Search**: Demonstrates Chroma vector database for semantic search
+  - Parameters for adding documents:
+    - `action`: "add"
+    - `text`: The text content to add to the vector database
+    - `metadata` (optional): Additional metadata for the document
+  - Parameters for searching documents:
+    - `action`: "search"
+    - `query`: The search query
+  - Requirements:
+    - OPENAI_API_KEY environment variable must be set
+    - Chroma DB server running (defaults to http://localhost:8000)
+
 ## Connecting to the Server
 
 The server uses the stdio transport by default, which means it communicates through standard input and output. You can connect to it using any MCP client that supports stdio transport.
@@ -118,7 +161,9 @@ mcp-project-overview/
 │   ├── index.ts           # Main entry point with MCP server implementation
 │   └── utils/             # Utility functions
 │       ├── gitignore.ts   # Utilities for handling .gitignore patterns
-│       └── projectStructure.ts # Project structure analysis utilities
+│       ├── projectStructure.ts # Project structure analysis utilities
+│       ├── langchain.ts   # LangChain integration utilities
+│       └── chroma.ts      # Chroma vector database utilities
 ├── .gitignore             # Git ignore patterns for files to exclude from version control
 ├── .prettierrc            # Prettier configuration
 ├── .prettierignore        # Files to be ignored by Prettier
@@ -130,6 +175,10 @@ mcp-project-overview/
 ## Dependencies
 
 - [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk): SDK for implementing MCP servers and clients
+- [LangChain.js](https://js.langchain.com/): Framework for developing applications powered by language models
+- [@langchain/openai](https://js.langchain.com/docs/integrations/chat/openai): OpenAI integration for LangChain
+- [@langchain/community](https://js.langchain.com/docs/integrations/vectorstores/chroma): Community integrations for LangChain
+- [Chroma](https://www.trychroma.com/): Vector database for storing and retrieving embeddings
 - TypeScript: For type-safe JavaScript development
 - Other standard Node.js libraries
 
