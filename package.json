@@ -11,9 +11,7 @@
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "prepare": "npm run format",
-    "test": "npm run build && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\"",
-    "test:inspector": "npm run build && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\"",
-    "test:dev": "npm run build && echo 'Starting MCP Inspector...' && npx @modelcontextprotocol/inspector connect --stdio \"node dist/index.js\""
+    "test:inspector": "npm run build && npx @modelcontextprotocol/inspector node dist/index.js"
   },
   "repository": {
     "type": "git",

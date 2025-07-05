@@ -106,7 +106,7 @@ The server uses the stdio transport by default, which means it communicates thro
 Example using the MCP Inspector:
 
 ```bash
-npx @modelcontextprotocol/inspector connect --stdio "node dist/index.js"
+npx -- @modelcontextprotocol/inspector connect --stdio "node dist/index.js"
 ```
 
 ## Project Structure
