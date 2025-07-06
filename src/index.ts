@@ -33,7 +33,8 @@ server.registerTool(
   'vector-add',
   {
     title: 'Vector Add',
-    description: 'Add documents to Chroma vector database',
+    description:
+      '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/function)以及使用方法描述。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project"}',
     inputSchema: {
       text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
       type: z.enum(['class', 'function']).describe('文檔類型，可以是類或函數'),
@@ -102,13 +103,14 @@ server.registerTool(
   'vector-search',
   {
     title: 'Vector Search',
-    description: 'Search documents in Chroma vector database',
+    description:
+      '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
     inputSchema: {
       query: z.string().describe('搜索查詢'),
+      projectName: z.string().describe('專案名稱'),
       type: z.enum(['class', 'function']).optional().describe('過濾文檔類型'),
       name: z.string().optional().describe('過濾類或函數名稱'),
       namespace: z.string().optional().describe('過濾命名空間或路徑'),
-      projectName: z.string().default('default_collection').describe('專案名稱'),
     },
   },
   async param => {

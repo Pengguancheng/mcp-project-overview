@@ -219,14 +219,48 @@ The MCP server exposes the following resources and tools:
   - Requirements:
     - OpenAI API key must be provided via the `--openai-api-key` parameter
 
-- **Vector Search**: Demonstrates Chroma vector database for semantic search
-  - Parameters for adding documents:
-    - `action`: "add"
-    - `text`: The text content to add to the vector database
-    - `metadata` (optional): Additional metadata for the document
-  - Parameters for searching documents:
-    - `action`: "search"
-    - `query`: The search query
+  - **Vector Database Tools**: Store and search code documentation using semantic vector search
+  - **Vector Add** (`vector-add`): Add class or function documentation to the vector database
+    - Parameters:
+      - `type`: Document type (`class` or `function`)
+      - `name`: The full name of the class or function
+      - `namespace` (optional): The namespace or path of the class or function
+      - `text`: The documentation content (should include summary and usage examples)
+      - `projectName`: The project name (used as collection name)
+      - `metadata` (optional): Additional metadata for the document
+    - Example:
+      ```json
+      {
+        "type": "class",
+        "name": "UserRepository",
+        "namespace": "app.repositories",
+        "text": "負責用戶數據的CRUD操作。使用範例：const userRepo = new UserRepository(); const user = await userRepo.findById(123);",
+        "projectName": "my-project"
+      }
+      ```
+  - **Vector Search** (`vector-search`): Search for documentation using semantic search
+    - Parameters:
+      - `query`: The search query text
+      - `projectName`: The project name to search in
+      - `type` (optional): Filter by document type (`class` or `function`)
+      - `name` (optional): Filter by class or function name
+      - `namespace` (optional): Filter by namespace or path
+    - Examples:
+      ```json
+      // Basic search
+      {
+        "query": "如何處理用戶驗證",
+        "projectName": "my-project"
+      }
+
+      // Filtered search
+      {
+        "query": "數據庫操作",
+        "type": "class",
+        "namespace": "app.repositories",
+        "projectName": "my-project"
+      }
+      ```
   - Requirements:
     - OpenAI API key must be provided via the `--openai-api-key` parameter
     - Chroma DB server running (can be specified via the `--chroma-server-url` parameter, defaults to http://localhost:8000)
