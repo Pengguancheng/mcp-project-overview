@@ -2,10 +2,10 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { initializeOpenAIModel, initializeOpenAIEmbeddings } from './utils/langchain';
+import { initializeOpenAIEmbeddings } from './utils/langchain';
 import {
-  initializeChromaStore,
   addDocumentsToChroma,
+  initializeChromaStore,
   searchSimilarDocuments,
 } from './utils/chroma';
 import { Document } from '@langchain/core/documents';
@@ -145,7 +145,12 @@ server.registerResource(
       const limit = parseInt(urlObj.searchParams.get('limit') || '10');
 
       logger.info(
-        `vector-resource: accessing project: ${projectName} with filters: ${JSON.stringify({ type, name, namespace, query })}`
+        `vector-resource: accessing project: ${projectName} with filters: ${JSON.stringify({
+          type,
+          name,
+          namespace,
+          query,
+        })}`
       );
 
       // Initialize OpenAI embeddings
