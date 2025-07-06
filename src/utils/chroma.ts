@@ -36,7 +36,8 @@ export const addDocumentsToChroma = async (
 export const searchSimilarDocuments = async (
   chromaStore: Chroma,
   query: string,
-  k: number = 5
+  k: number = 5,
+  filter?: Record<string, any>
 ): Promise<Document[]> => {
-  return await chromaStore.similaritySearch(query, k);
+  return await chromaStore.similaritySearch(query, k, filter);
 };

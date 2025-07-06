@@ -202,6 +202,27 @@ The MCP server exposes the following resources and tools:
   - Parameters:
     - `projectPath`: Path to the project root directory
 
+- **Vector Documents** (`vector://projects/{projectName}/documents`): Query code documentation stored in the vector database
+  - URL Parameters:
+    - `projectName`: Project name (corresponds to Chroma collection name)
+  - Query Parameters:
+    - `type` (optional): Filter by document type (`class` or `function`)
+    - `name` (optional): Filter by class or function name
+    - `namespace` (optional): Filter by namespace or path
+    - `query` (optional): Text search query for similarity search
+    - `limit` (optional): Maximum number of results to return (default: 10)
+  - Examples:
+    ```
+    # Get all class documents in a specific namespace
+    vector://projects/my-project/documents?type=class&namespace=app.repositories
+
+    # Search for documents related to authentication
+    vector://projects/my-project/documents?query=authentication
+
+    # Get a specific function document
+    vector://projects/my-project/documents?type=function&name=calculateTax
+    ```
+
 ### Tools
 
 - **Analyze File**: Analyze the content and purpose of a file
