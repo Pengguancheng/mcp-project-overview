@@ -23,6 +23,9 @@ if (!OPENAI_API_KEY) {
 const server = new McpServer({
   name: 'project-overview-server',
   version: '1.0.0',
+  title: '项目概览与分析服务器',
+  description:
+    '基于Model Context Protocol (MCP)的代码项目分析工具，支持项目结构分析、文件内容分析以及通过Chroma向量数据库进行语义搜索',
 });
 
 // 4. 註冊一個用於添加文檔到 Chroma 的 Tool
@@ -32,7 +35,10 @@ server.registerTool(
     title: 'Vector Add',
     description: 'Add documents to Chroma vector database',
     inputSchema: {
-      text: z.string(),
+      text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
+      type: z.enum(['class', 'function']).describe('文檔類型，可以是類或函數'),
+      name: z.string().describe('類或函數的完整名稱'),
+      namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
       metadata: z.record(z.any()).optional(),
       projectName: z.string().default('default_collection').describe('專案名稱'),
     },
@@ -64,6 +70,9 @@ server.registerTool(
         pageContent: param.text,
         metadata: {
           ...param.metadata,
+          type: param.type,
+          name: param.name,
+          namespace: param.namespace || '',
           projectName: param.projectName,
         },
       });
@@ -95,7 +104,10 @@ server.registerTool(
     title: 'Vector Search',
     description: 'Search documents in Chroma vector database',
     inputSchema: {
-      query: z.string(),
+      query: z.string().describe('搜索查詢'),
+      type: z.enum(['class', 'function']).optional().describe('過濾文檔類型'),
+      name: z.string().optional().describe('過濾類或函數名稱'),
+      namespace: z.string().optional().describe('過濾命名空間或路徑'),
       projectName: z.string().default('default_collection').describe('專案名稱'),
     },
   },
