@@ -1,27 +1,34 @@
-import { Chroma } from "@langchain/community/vectorstores/chroma";
-import { Document } from "langchain/document";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { Chroma } from '@langchain/community/vectorstores/chroma';
+import { Document } from '@langchain/core/documents';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { ChromaClient } from 'chromadb';
 
-// Initialize Chroma client with a collection
+// Initialize Chroma vector store with simplified approach
 export const initializeChromaStore = async (
   embeddings: OpenAIEmbeddings,
-  collectionName: string = "default_collection",
-  url?: string
-) => {
-  // Use the provided URL, or the environment variable, or the default
-  const chromaUrl = url || process.env.CHROMA_SERVER_URL || "http://localhost:8000";
+  collectionName: string = 'default_collection'
+): Promise<Chroma> => {
+  try {
+    const url = process.env.CHROMA_URL || 'http://localhost:8000';
 
-  return await Chroma.fromExistingCollection(embeddings, {
-    collectionName,
-    url: chromaUrl,
-  });
+    // 使用簡化的 Chroma 初始化方式
+    return new Chroma(embeddings, {
+      collectionName,
+      url: url,
+      collectionMetadata: {
+        'hnsw:space': 'cosine',
+      },
+    });
+  } catch (error) {
+    throw error;
+  }
 };
 
 // Add documents to Chroma
 export const addDocumentsToChroma = async (
   chromaStore: Chroma,
   documents: Document[]
-) => {
+): Promise<string[]> => {
   return await chromaStore.addDocuments(documents);
 };
 
@@ -30,14 +37,6 @@ export const searchSimilarDocuments = async (
   chromaStore: Chroma,
   query: string,
   k: number = 5
-) => {
+): Promise<Document[]> => {
   return await chromaStore.similaritySearch(query, k);
-};
-
-// Create a document from text
-export const createDocument = (
-  text: string,
-  metadata: Record<string, any> = {}
-) => {
-  return new Document({ pageContent: text, metadata });
 };

@@ -6,11 +6,16 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:with-params": "node dist/index.js --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000",
     "dev": "ts-node src/index.ts",
+    "dev:with-params": "ts-node src/index.ts --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000",
     "watch": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "prepare": "npm run format",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "test:inspector": "npm run build && npx @modelcontextprotocol/inspector node dist/index.js"
   },
   "repository": {
@@ -25,18 +30,21 @@
   },
   "homepage": "https://github.com/Pengguancheng/mcp-project-overview#readme",
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/node": "^24.0.10",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "prettier": "^3.2.5",
+    "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "@langchain/community": "^0.3.48",
+    "@langchain/core": "^0.3.62",
     "@langchain/openai": "^0.5.18",
     "@modelcontextprotocol/sdk": "^1.15.0",
-    "chromadb": "^3.0.6",
-    "dotenv": "^17.0.1",
+    "chromadb": "^1.10.5",
     "langchain": "^0.3.29"
   }
 }

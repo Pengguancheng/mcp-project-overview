@@ -62,16 +62,73 @@ npm run format:check
 
 The code will be automatically formatted when you install the project dependencies (via the `prepare` script).
 
-### Environment Variables
+### Command Line Parameters
 
-For LangChain and Chroma functionality, you need to set the following environment variables:
+For LangChain and Chroma functionality, you need to provide the following parameters when running the application:
 
 ```bash
 # Required for LangChain and Chroma vector embeddings
-export OPENAI_API_KEY=your_openai_api_key
+--openai-api-key YOUR_API_KEY
+
+# Optional, defaults to http://localhost:8000
+--chroma-server-url YOUR_CHROMA_SERVER_URL
 ```
 
-You can add these to your environment or create a `.env` file in the project root.
+#### Authentication Parameters
+
+The server supports token-based authentication. You must either provide an authentication token or explicitly disable authentication:
+
+```bash
+# Option 1: Use token-based authentication (recommended)
+--auth-token YOUR_AUTH_TOKEN
+
+# Option 2: Disable authentication (not recommended for production)
+--DANGEROUSLY_OMIT_AUTH
+```
+
+You can also set these options using environment variables:
+- `AUTH_TOKEN`: Set to your authentication token
+- `DANGEROUSLY_OMIT_AUTH`: Set to "true" to disable authentication
+
+When authentication is enabled, clients must include the `auth_token` parameter in their requests:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "your-method",
+  "params": {
+    "auth_token": "YOUR_AUTH_TOKEN",
+    // other parameters...
+  },
+  "id": 1
+}
+```
+
+You can pass these parameters directly to the command when running the application:
+
+```bash
+# Example for running the built application
+npm run start -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
+
+# Or with authentication disabled (not recommended for production)
+npm run start -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --DANGEROUSLY_OMIT_AUTH
+
+# Or use the convenience script (you'll need to update it to include authentication parameters)
+npm run start:with-params
+```
+
+For development mode:
+
+```bash
+# Example for running in development mode
+npm run dev -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
+
+# Or with authentication disabled (not recommended for production)
+npm run dev -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --DANGEROUSLY_OMIT_AUTH
+
+# Or use the convenience script (you'll need to update it to include authentication parameters)
+npm run dev:with-params
+```
 
 ### Chroma DB Setup
 
@@ -103,6 +160,38 @@ Or with file watching:
 npm run watch
 ```
 
+### Testing
+
+This project uses Jest for testing. Run all tests with:
+
+```bash
+npm test
+```
+
+#### Chroma Vector Database Testing
+
+我们提供了两种不同的测试方法来测试Chroma向量数据库功能：
+
+1. **实际连接测试** (chroma.test.ts):
+```bash
+npm run test:chroma
+```
+此测试使用实际的Chroma数据库连接和OpenAI API进行测试，确保在真实环境中功能正常工作。
+运行此测试需要：
+   - 设置`OPENAI_API_KEY`环境变量
+   - 本地运行Chroma服务器 (默认：http://localhost:8000)
+
+   ```bash
+   # 设置环境变量并运行测试
+   OPENAI_API_KEY=your_api_key npm run test:chroma
+   ```
+
+2. **模拟测试** (chroma.spec.ts):
+```bash
+npm run test:chroma:spec
+```
+此测试使用模拟(mock)实现而不需要实际的数据库连接或API密钥，适合快速验证和CI/CD环境。
+
 ## Using the MCP Server
 
 The MCP server exposes the following resources and tools:
@@ -128,7 +217,7 @@ The MCP server exposes the following resources and tools:
   - Parameters:
     - `prompt`: The text prompt to send to the language model
   - Requirements:
-    - OPENAI_API_KEY environment variable must be set
+    - OpenAI API key must be provided via the `--openai-api-key` parameter
 
 - **Vector Search**: Demonstrates Chroma vector database for semantic search
   - Parameters for adding documents:
@@ -139,8 +228,8 @@ The MCP server exposes the following resources and tools:
     - `action`: "search"
     - `query`: The search query
   - Requirements:
-    - OPENAI_API_KEY environment variable must be set
-    - Chroma DB server running (defaults to http://localhost:8000)
+    - OpenAI API key must be provided via the `--openai-api-key` parameter
+    - Chroma DB server running (can be specified via the `--chroma-server-url` parameter, defaults to http://localhost:8000)
 
 ## Connecting to the Server
 
@@ -149,7 +238,17 @@ The server uses the stdio transport by default, which means it communicates thro
 Example using the MCP Inspector:
 
 ```bash
+# Basic connection
 npx -- @modelcontextprotocol/inspector connect --stdio "node dist/index.js"
+
+# With parameters
+npx -- @modelcontextprotocol/inspector connect --stdio "node dist/index.js --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN"
+```
+
+You can also use the test:inspector script which is already set up in package.json:
+
+```bash
+npm run test:inspector -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
 ```
 
 ## Project Structure

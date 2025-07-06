@@ -1,8 +1,8 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { ChatOpenAI } from '@langchain/openai';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 // Initialize OpenAI chat model
-export const initializeOpenAIModel = (apiKey: string, modelName: string = "gpt-3.5-turbo") => {
+export const initializeOpenAIModel = (apiKey: string, modelName: string = 'gpt-3.5-turbo') => {
   return new ChatOpenAI({
     openAIApiKey: apiKey,
     modelName: modelName,
@@ -14,6 +14,6 @@ export const initializeOpenAIModel = (apiKey: string, modelName: string = "gpt-3
 export const initializeOpenAIEmbeddings = (apiKey: string) => {
   return new OpenAIEmbeddings({
     openAIApiKey: apiKey,
-    modelName: "text-embedding-3-small", // Default embedding model
+    model: 'text-embedding-ada-002',
   });
 };

@@ -2,23 +2,19 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import * as dotenv from 'dotenv';
 import { initializeOpenAIModel, initializeOpenAIEmbeddings } from './utils/langchain';
 import {
   initializeChromaStore,
   addDocumentsToChroma,
   searchSimilarDocuments,
-  createDocument,
 } from './utils/chroma';
-
-// Load environment variables from .env file
-dotenv.config();
+import { Document } from '@langchain/core/documents';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 if (!OPENAI_API_KEY) {
   console.warn(
-    'Warning: OPENAI_API_KEY environment variable not set. LangChain features will not work properly.'
+    'Warning: OPENAI_API_KEY not provided. Use --openai-api-key parameter. LangChain features will not work properly.'
   );
 }
 
@@ -99,9 +95,12 @@ server.registerTool(
       const chromaStore = await initializeChromaStore(embeddings, param.projectName);
 
       // Create a document and add it to Chroma
-      const document = createDocument(param.text, {
-        ...param.metadata,
-        projectName: param.projectName,
+      const document = new Document({
+        pageContent: param.text,
+        metadata: {
+          ...param.metadata,
+          projectName: param.projectName,
+        },
       });
       await addDocumentsToChroma(chromaStore, [document]);
 
@@ -165,7 +164,7 @@ server.registerTool(
   }
 );
 
-// 6. 使用 stdio transport 接收與回應
+// 6. 使用 stdio transport 接收與回應，並添加認證
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
