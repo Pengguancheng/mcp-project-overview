@@ -9,11 +9,12 @@ import {
   searchSimilarDocuments,
 } from './utils/chroma';
 import { Document } from '@langchain/core/documents';
+import logger from './utils/logger';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 if (!OPENAI_API_KEY) {
-  console.warn(
+  logger.warn(
     'Warning: OPENAI_API_KEY not provided. Use --openai-api-key parameter. LangChain features will not work properly.'
   );
 }
@@ -23,45 +24,6 @@ const server = new McpServer({
   name: 'project-overview-server',
   version: '1.0.0',
 });
-
-// 3. 註冊一個使用 LangChain 的 Tool
-server.registerTool(
-  'langchain-demo',
-  {
-    title: 'LangChain Demo',
-    description: 'Demonstrates LangChain integration',
-    inputSchema: { prompt: z.string() },
-  },
-  async param => {
-    try {
-      if (!OPENAI_API_KEY) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable.',
-            },
-          ],
-        };
-      }
-
-      // Initialize OpenAI model
-      const model = initializeOpenAIModel(OPENAI_API_KEY);
-
-      // Generate a response using LangChain
-      const response = await model.invoke(param.prompt);
-
-      return {
-        content: [{ type: 'text', text: `LangChain response: ${JSON.stringify(response)}` }],
-      };
-    } catch (error: any) {
-      console.error('LangChain error:', error);
-      return {
-        content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
-      };
-    }
-  }
-);
 
 // 4. 註冊一個用於添加文檔到 Chroma 的 Tool
 server.registerTool(
@@ -87,9 +49,12 @@ server.registerTool(
           ],
         };
       }
+      logger.info(`vector-add: received params: ${JSON.stringify(param)}`);
 
       // Initialize OpenAI embeddings
       const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
+
+      logger.info(`vector-add: initializing Chroma store for project: ${param.projectName}`);
 
       // Initialize Chroma store with project name as collection name
       const chromaStore = await initializeChromaStore(embeddings, param.projectName);
@@ -102,13 +67,20 @@ server.registerTool(
           projectName: param.projectName,
         },
       });
+
+      logger.info(
+        `vector-add: adding document to Chroma with metadata: ${JSON.stringify(document.metadata)}`
+      );
+
       await addDocumentsToChroma(chromaStore, [document]);
+
+      logger.info(`vector-add: document added to collection "${param.projectName}" successfully`);
 
       return {
         content: [{ type: 'text', text: 'Document added to vector database successfully.' }],
       };
     } catch (error: any) {
-      console.error('Chroma add error:', error);
+      logger.error('Chroma add error:', error);
       return {
         content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
       };
@@ -140,14 +112,23 @@ server.registerTool(
         };
       }
 
+      logger.info(`vector-search: received params: ${JSON.stringify(param)}`);
+
       // Initialize OpenAI embeddings
       const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
+
+      logger.info(`vector-search: initializing Chroma store for project: ${param.projectName}`);
 
       // Initialize Chroma store with project name as collection name
       const chromaStore = await initializeChromaStore(embeddings, param.projectName);
 
+      logger.info(`vector-search: searching similar documents for query: "${param.query}"`);
       // Search for similar documents
       const results = await searchSimilarDocuments(chromaStore, param.query);
+
+      logger.info(
+        `vector-search: found ${results.length} results in collection "${param.projectName}"`
+      );
 
       return {
         content: [
@@ -156,7 +137,7 @@ server.registerTool(
         ],
       };
     } catch (error: any) {
-      console.error('Chroma search error:', error);
+      logger.error('Chroma search error:', error);
       return {
         content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
       };
@@ -171,6 +152,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('伺服器啟動失敗：', err);
+  logger.error('伺服器啟動失敗：', err);
   process.exit(1);
 });

@@ -45,6 +45,7 @@
     "@langchain/openai": "^0.5.18",
     "@modelcontextprotocol/sdk": "^1.15.0",
     "chromadb": "^1.10.5",
-    "langchain": "^0.3.29"
+    "langchain": "^0.3.29",
+    "winston": "^3.11.0"
   }
 }
