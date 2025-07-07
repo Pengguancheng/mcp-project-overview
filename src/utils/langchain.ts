@@ -1,12 +1,15 @@
-import { ChatOpenAI } from '@langchain/openai';
+import { ChatOpenAI, OpenAIChatModelId } from '@langchain/openai';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
 // Initialize OpenAI chat model
-export const initializeOpenAIModel = (apiKey: string, modelName: string = 'gpt-3.5-turbo') => {
+export const initializeOpenAIModel = (
+  apiKey: string,
+  model: OpenAIChatModelId = 'gpt-3.5-turbo'
+) => {
   return new ChatOpenAI({
     openAIApiKey: apiKey,
-    modelName: modelName,
-    temperature: 0.7,
+    model: model,
+    temperature: 0.9,
   });
 };
 

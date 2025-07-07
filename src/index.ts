@@ -10,6 +10,8 @@ import {
 } from './utils/chroma';
 import { Document } from '@langchain/core/documents';
 import logger from './utils/logger';
+import { generateProjectOverview } from './cmd/generateOverview';
+import * as path from 'path';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -166,7 +168,62 @@ server.registerTool(
   }
 );
 
-// 6. 使用 stdio transport 接收與回應，並添加認證
+// 6. 註冊一個用於生成項目概覽的 Tool
+server.registerTool(
+  'generate-overview',
+  {
+    title: 'Generate Project Overview',
+    description:
+      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个overview.md文件中。例如：{"targetDir":"./src", "overviewPath":"./docs/overview.md"}',
+    inputSchema: {
+      targetDir: z.string().describe('要分析的目标目录路径'),
+      overviewPath: z.string().optional().describe('概览文档的输出路径，默认为项目根目录下的overview.md'),
+    },
+  },
+  async param => {
+    try {
+      if (!OPENAI_API_KEY) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable.',
+            },
+          ],
+        };
+      }
+
+      logger.info(`generate-overview: received params: ${JSON.stringify(param)}`);
+
+      const targetDir = path.resolve(param.targetDir);
+      const overviewPath = param.overviewPath ? path.resolve(param.overviewPath) : path.resolve('overview.md');
+
+      logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
+
+      const result = await generateProjectOverview(targetDir, overviewPath, OPENAI_API_KEY);
+
+      return {
+        content: [
+          { 
+            type: 'text', 
+            text: `Project overview generated successfully and saved to ${overviewPath}` 
+          },
+          {
+            type: 'text',
+            text: '概览内容预览:\n\n' + result.substring(0, 500) + '...'
+          }
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Generate overview error:', error);
+      return {
+        content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
+      };
+    }
+  }
+);
+
+// 7. 使用 stdio transport 接收與回應，並添加認證
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
