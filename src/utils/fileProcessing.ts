@@ -15,13 +15,18 @@ export async function loadFilesFromDirectory(
 ): Promise<Document[]> {
   logger.info(`Loading files from ${targetDir}...`);
 
-  const loader = new DirectoryLoader(targetDir, {
-    '.md': path => new TextLoader(path),
-    '.ts': path => new TextLoader(path),
-    '.js': path => new TextLoader(path),
-    '.go': path => new TextLoader(path),
-    '.cs': path => new TextLoader(path),
-  });
+  const loader = new DirectoryLoader(
+    targetDir,
+    {
+      '.md': path => new TextLoader(path),
+      '.ts': path => new TextLoader(path),
+      '.js': path => new TextLoader(path),
+      '.go': path => new TextLoader(path),
+      '.cs': path => new TextLoader(path),
+    },
+    true,
+    'ignore'
+  );
 
   return await loader.load();
 }
