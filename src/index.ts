@@ -12,6 +12,7 @@ import { Document } from '@langchain/core/documents';
 import logger from './utils/logger';
 import { generateProjectOverview } from './cmd/generateOverview';
 import * as path from 'path';
+import { generateProjectGuidelines } from './cmd/generateProjectGuidelines';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -216,14 +217,16 @@ server.registerTool(
 
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
 
-      generateProjectOverview(
-        targetDir,
-        overviewPath,
-        OPENAI_API_KEY,
-        param.summaryType || 'overview'
-      ).catch(error => {
-        logger.error('Generate overview error:', error);
-      });
+      // 根据摘要类型选择不同的生成函数
+      if (param.summaryType === 'guidelines') {
+        generateProjectGuidelines(targetDir, overviewPath, OPENAI_API_KEY).catch(error => {
+          logger.error('Generate guidelines error:', error);
+        });
+      } else {
+        generateProjectOverview(targetDir, overviewPath, OPENAI_API_KEY).catch(error => {
+          logger.error('Generate overview error:', error);
+        });
+      }
 
       return {
         content: [
