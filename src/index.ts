@@ -216,22 +216,20 @@ server.registerTool(
 
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
 
-      const result = await generateProjectOverview(
+      generateProjectOverview(
         targetDir,
         overviewPath,
         OPENAI_API_KEY,
         param.summaryType || 'overview'
-      );
+      ).catch(error => {
+        logger.error('Generate overview error:', error);
+      });
 
       return {
         content: [
           {
             type: 'text',
             text: `Project overview generated successfully and saved to ${overviewPath}`,
-          },
-          {
-            type: 'text',
-            text: '概览内容预览:\n\n' + result.substring(0, 500) + '...',
           },
         ],
       };
