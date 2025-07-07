@@ -177,11 +177,11 @@ server.registerTool(
 
 // 6. 註冊一個用於生成項目概覽的 Tool
 server.registerTool(
-  'generate-overview',
+  'summary-code',
   {
-    title: 'Generate Project Overview',
+    title: 'Summary Project Code',
     description:
-      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个文档中。支持不同类型的摘要：overview（项目概览）、code_rules（代码规范）、guidelines（开发指南）。例如：{"targetDir":"./src", "overviewPath":"./docs/overview.md", "summaryType":"code_rules"}',
+      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个文档中。支持不同类型的摘要：overview（项目概览）、guidelines（开发指南）。例如：{"targetDir":"~/ms/member/src", "overviewPath":"~/ms/member/docs/overview.md", "summaryType":"guidelines"}',
     inputSchema: {
       targetDir: z.string().describe('要分析的目标目录絕對路径'),
       overviewPath: z
@@ -189,9 +189,9 @@ server.registerTool(
         .optional()
         .describe('概览文档的输出絕對路径，默认为项目根目录下的overview.md'),
       summaryType: z
-        .enum(['overview', 'code_rules', 'guidelines'])
+        .enum(['overview', 'guidelines'])
         .default('overview')
-        .describe('摘要类型：overview（项目概览）、code_rules（代码规范）、guidelines（开发指南）'),
+        .describe('摘要类型：overview（项目概览）、guidelines（开发指南）'),
     },
   },
   async param => {
@@ -229,7 +229,7 @@ server.registerTool(
         content: [
           {
             type: 'text',
-            text: `项目${param.summaryType === 'code_rules' ? '编码规范' : param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${overviewPath}`,
+            text: `项目${param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${overviewPath}`,
           },
         ],
       };
