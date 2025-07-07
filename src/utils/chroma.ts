@@ -1,7 +1,8 @@
 import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { Document } from '@langchain/core/documents';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import { ChromaClient } from 'chromadb';
+import { ChromaClient, OpenAIEmbeddingFunction } from 'chromadb';
+import logger from './logger';
 
 // Initialize Chroma vector store with simplified approach
 export const initializeChromaStore = async (
@@ -42,3 +43,18 @@ export const searchSimilarDocuments = async (
 ): Promise<Document[]> => {
   return await chromaStore.similaritySearch(query, k, filter);
 };
+
+// 添加到 src/utils/chroma.ts
+export async function clearChromaCollection(projectName: string): Promise<void> {
+  const client = new ChromaClient({
+    path: process.env.CHROMA_SERVER_URL || 'http://localhost:8000',
+  });
+
+  try {
+    await client.deleteCollection({ name: projectName });
+    logger.info(`Collection "${projectName}" cleared successfully`);
+  } catch (error) {
+    logger.error('Error clearing collection:', error);
+    throw error;
+  }
+}
