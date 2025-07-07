@@ -47,7 +47,7 @@ export const searchSimilarDocuments = async (
 // 添加到 src/utils/chroma.ts
 export async function clearChromaCollection(projectName: string): Promise<void> {
   const client = new ChromaClient({
-    path: process.env.CHROMA_SERVER_URL || 'http://localhost:8000',
+    path: process.env.CHROMA_URL || 'http://localhost:8000',
   });
 
   try {

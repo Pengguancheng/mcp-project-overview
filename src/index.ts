@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { initializeOpenAIEmbeddings } from './utils/langchain';
 import {
   addDocumentsToChroma,
+  clearChromaCollection,
   initializeChromaStore,
   searchSimilarDocuments,
 } from './utils/chroma';
@@ -262,7 +263,41 @@ server.registerTool(
   }
 );
 
-// 7. 使用 stdio transport 接收與回應，並添加認證
+// 7. 註冊一個用於清除 Chroma 集合的 Tool
+server.registerTool(
+  'vector-clear',
+  {
+    title: 'Clear Vector Collection',
+    description:
+      '清除指定项目名称的向量数据库集合。此工具会删除与项目关联的所有向量数据。例如：{"projectName":"my-project"}',
+    inputSchema: {
+      projectName: z.string().describe('要清除的项目名称（对应于Chroma集合名称）'),
+    },
+  },
+  async param => {
+    try {
+      logger.info(`vector-clear: received params: ${JSON.stringify(param)}`);
+
+      await clearChromaCollection(param.projectName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `成功清除项目 "${param.projectName}" 的向量数据库集合`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Chroma clear error:', error);
+      return {
+        content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
+      };
+    }
+  }
+);
+
+// 8. 使用 stdio transport 接收與回應，並添加認證
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
