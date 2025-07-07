@@ -11,22 +11,30 @@ import logger from '../utils/logger';
 
 /**
  * 生成项目开发者指南文档
- * @param targetDir 目标目录
- * @param existingGuidelinesPath 现有指南文档路径
+ * @param projectDir 项目根目录的绝对路径
+ * @param targetDir 目标目录（相对于项目根目录的路径）
+ * @param existingGuidelinesPath 现有指南文档路径（相对于项目根目录的路径）
  * @param apiKey OpenAI API 密钥
  * @returns 生成的指南文档内容
  */
 export async function generateProjectGuidelines(
+  projectDir: string,
   targetDir: string,
-  existingGuidelinesPath: string = path.resolve('guidelines.md'),
+  existingGuidelinesPath: string = 'guidelines.md',
   apiKey: string
 ): Promise<string> {
   try {
     // Initialize OpenAI LLM
     const llm = initializeOpenAIModel(apiKey, 'gpt-4.1-mini');
 
+    // Resolve target directory as absolute path
+    const absoluteTargetDir = path.resolve(projectDir, targetDir);
+
+    // Resolve existing guidelines path as absolute path
+    const absoluteGuidelinesPath = path.resolve(projectDir, existingGuidelinesPath);
+
     // Load all files from the target directory
-    const allDocs = await loadFilesFromDirectory(targetDir);
+    const allDocs = await loadFilesFromDirectory(absoluteTargetDir);
 
     const filePaths = allDocs.map(doc => doc.metadata.source as string);
 
@@ -55,13 +63,13 @@ export async function generateProjectGuidelines(
   },
   ...
 ]
-  
+
 代码内容：
 {text}
 `,
       });
 
-      const relativePath = path.relative(process.cwd(), src);
+      const relativePath = path.relative(projectDir, src);
       logger.info(`  • ${src} → ${summary.slice(0, 60).replace(/\n/g, ' ')}...`);
       return { filePath: relativePath, absolutePath: src, summary };
     });
@@ -71,7 +79,7 @@ export async function generateProjectGuidelines(
 
     // Read existing guidelines
     logger.info('Merging summaries into guidelines.md...');
-    const existing = readExistingOverview(existingGuidelinesPath);
+    const existing = readExistingOverview(absoluteGuidelinesPath);
 
     // 不直接判断哪些文件被移除，而是将所有路径提供给 LLM 进行判断
     logger.info(`Providing file paths to LLM for existence check`);
@@ -134,10 +142,10 @@ ${fileSummaries.map(x => x.summary).join(',\n')}
     logger.info(`生成开发者指南文档完成`);
 
     // Write to guidelines.md
-    writeOverviewToFile(existingGuidelinesPath, updatedGuidelines.text);
+    writeOverviewToFile(absoluteGuidelinesPath, updatedGuidelines.text);
 
     logger.info(
-      `${path.basename(existingGuidelinesPath)} 已更新 (${fileSummaries.length} 个文件的开发者指南已合并)`
+      `${path.basename(absoluteGuidelinesPath)} 已更新 (${fileSummaries.length} 个文件的开发者指南已合并)`
     );
 
     return updatedGuidelines.text;

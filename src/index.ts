@@ -182,13 +182,14 @@ server.registerTool(
   {
     title: 'Summary Project Code',
     description:
-      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个文档中。支持不同类型的摘要：overview（项目概览）、guidelines（开发指南）。例如：{"targetDir":"~/ms/member/src", "overviewPath":"~/ms/member/docs/overview.md", "summaryType":"guidelines"}',
+      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个文档中。支持不同类型的摘要：overview（项目概览）、guidelines（开发指南）。例如：{"projectDir":"/path/to/project", "targetDir":"src", "outputFile":"docs/overview.md", "summaryType":"guidelines"}',
     inputSchema: {
-      targetDir: z.string().describe('要分析的目标目录絕對路径'),
-      overviewPath: z
+      projectDir: z.string().describe('项目根目录的絕對路径'),
+      targetDir: z.string().describe('要分析的目标目录（相对于项目根目录的路径）'),
+      outputFile: z
         .string()
         .optional()
-        .describe('概览文档的输出絕對路径，默认为项目根目录下的overview.md'),
+        .describe('概览文档的输出路径（相对于项目根目录的路径），默认为项目根目录下的overview.md'),
       summaryType: z
         .enum(['overview', 'guidelines'])
         .default('overview')
@@ -210,20 +211,26 @@ server.registerTool(
 
       logger.info(`generate-overview: received params: ${JSON.stringify(param)}`);
 
-      const targetDir = path.resolve(param.targetDir);
-      const overviewPath = param.overviewPath
-        ? path.resolve(param.overviewPath)
-        : path.resolve('overview.md');
+      // Resolve project directory as absolute path
+      const projectDir = path.resolve(param.projectDir);
 
-      logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
+      // Resolve target directory relative to project directory
+      const targetDir = path.resolve(projectDir, param.targetDir);
+
+      // Resolve output file path relative to project directory
+      const outputFile = param.outputFile
+        ? path.resolve(projectDir, param.outputFile)
+        : path.resolve(projectDir, 'overview.md');
+
+      logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${outputFile}`);
 
       // 根据摘要类型选择不同的生成函数
       if (param.summaryType === 'guidelines') {
-        generateProjectGuidelines(targetDir, overviewPath, OPENAI_API_KEY).catch(error => {
+        generateProjectGuidelines(projectDir, param.targetDir, outputFile, OPENAI_API_KEY).catch(error => {
           logger.error('Generate guidelines error:', error);
         });
       } else {
-        generateProjectOverview(targetDir, overviewPath, OPENAI_API_KEY).catch(error => {
+        generateProjectOverview(projectDir, param.targetDir, outputFile, OPENAI_API_KEY).catch(error => {
           logger.error('Generate overview error:', error);
         });
       }
@@ -232,7 +239,7 @@ server.registerTool(
         content: [
           {
             type: 'text',
-            text: `项目${param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${overviewPath}`,
+            text: `项目${param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${outputFile}`,
           },
         ],
       };
