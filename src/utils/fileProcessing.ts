@@ -49,15 +49,25 @@ export async function splitDocuments(
   return await splitter.splitDocuments(documents);
 }
 
+// 用于自定义提示词的接口
+export interface SummaryPrompts {
+  mapPrompt?: string;
+  combinePrompt?: string;
+}
+
 // Generate summary for a file
-export async function generateFileSummary(documents: Document[], llm: ChatOpenAI): Promise<string> {
+export async function generateFileSummary(
+  documents: Document[],
+  llm: ChatOpenAI,
+  customPrompts?: SummaryPrompts
+): Promise<string> {
   const chunks = await splitDocuments(documents);
   const summaryChain = loadSummarizationChain(llm, { type: 'map_reduce' });
 
   const { text } = await summaryChain.call({
     input_documents: chunks,
-    map_prompt: '请提炼下列内容的关键要点：\n\n{text}',
-    combine_prompt: '请将上述要点整合成文件概要：\n\n{text}',
+    map_prompt: customPrompts?.mapPrompt || '请提炼下列内容的关键要点：\n\n{text}',
+    combine_prompt: customPrompts?.combinePrompt || '请将上述要点整合成文件概要：\n\n{text}',
   });
 
   return text.trim();

@@ -181,13 +181,17 @@ server.registerTool(
   {
     title: 'Generate Project Overview',
     description:
-      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个overview.md文件中。例如：{"targetDir":"./src", "overviewPath":"./docs/overview.md"}',
+      '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个文档中。支持不同类型的摘要：overview（项目概览）、code_rules（代码规范）、guidelines（开发指南）。例如：{"targetDir":"./src", "overviewPath":"./docs/overview.md", "summaryType":"code_rules"}',
     inputSchema: {
       targetDir: z.string().describe('要分析的目标目录絕對路径'),
       overviewPath: z
         .string()
         .optional()
         .describe('概览文档的输出絕對路径，默认为项目根目录下的overview.md'),
+      summaryType: z
+        .enum(['overview', 'code_rules', 'guidelines'])
+        .default('overview')
+        .describe('摘要类型：overview（项目概览）、code_rules（代码规范）、guidelines（开发指南）'),
     },
   },
   async param => {
@@ -212,7 +216,12 @@ server.registerTool(
 
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
 
-      const result = await generateProjectOverview(targetDir, overviewPath, OPENAI_API_KEY);
+      const result = await generateProjectOverview(
+        targetDir,
+        overviewPath,
+        OPENAI_API_KEY,
+        param.summaryType || 'overview'
+      );
 
       return {
         content: [

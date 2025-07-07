@@ -9,10 +9,14 @@ import {
   writeOverviewToFile,
 } from '../utils/fileProcessing';
 
+// 定义不同的摘要类型
+export type SummaryType = 'overview' | 'code_rules' | 'guidelines';
+
 export async function generateProjectOverview(
   targetDir: string,
   existingOverviewPath: string = path.resolve('overview.md'),
-  apiKey: string
+  apiKey: string,
+  summaryType: SummaryType = 'overview'
 ): Promise<string> {
   try {
     // Initialize OpenAI LLM
@@ -27,9 +31,30 @@ export async function generateProjectOverview(
     const docsBySource = groupDocumentsBySource(allDocs);
 
     // Generate summaries for each file in parallel
-    logger.info('Summarizing each file in parallel...');
+    logger.info(`Summarizing each file in parallel with type: ${summaryType}...`);
     const summaryPromises = Object.entries(docsBySource).map(async ([src, docs]) => {
-      const summary = await generateFileSummary(docs, llm);
+      // 根据不同的摘要类型使用不同的提示词
+      let summary;
+      switch (summaryType) {
+        case 'code_rules':
+          summary = await generateFileSummary(docs, llm, {
+            mapPrompt: '请分析以下代码，提取出其中遵循的编码规则、模式和最佳实践：\n\n{text}',
+            combinePrompt:
+              '请整合以下所有编码规则和最佳实践，形成一份完整的代码规范文档：\n\n{text}',
+          });
+          break;
+        case 'guidelines':
+          summary = await generateFileSummary(docs, llm, {
+            mapPrompt: '请分析以下代码，提取出使用指南、API调用方式和注意事项：\n\n{text}',
+            combinePrompt: '请整合以下所有使用指南，形成一份完整的开发者指南文档：\n\n{text}',
+          });
+          break;
+        case 'overview':
+        default:
+          summary = await generateFileSummary(docs, llm);
+          break;
+      }
+
       const relativePath = path.relative(process.cwd(), src);
       logger.info(`  • ${src} → ${summary.slice(0, 60).replace(/\n/g, ' ')}...`);
       return { filePath: relativePath, absolutePath: src, summary };
