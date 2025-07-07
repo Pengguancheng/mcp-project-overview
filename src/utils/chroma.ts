@@ -27,9 +27,10 @@ export const initializeChromaStore = async (
 // Add documents to Chroma
 export const addDocumentsToChroma = async (
   chromaStore: Chroma,
-  documents: Document[]
+  documents: Document[],
+  options?: { ids?: string[] }
 ): Promise<string[]> => {
-  return await chromaStore.addDocuments(documents);
+  return await chromaStore.addDocuments(documents, options);
 };
 
 // Search similar documents in Chroma

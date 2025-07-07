@@ -34,7 +34,7 @@ server.registerTool(
   {
     title: 'Vector Add',
     description:
-      '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/function)以及使用方法描述。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project"}',
+      '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/function)以及使用方法描述。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project", "filePath":"/path/to/file.ts"}',
     inputSchema: {
       text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
       type: z.enum(['class', 'function']).describe('文檔類型，可以是類或函數'),
@@ -42,6 +42,7 @@ server.registerTool(
       namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
       metadata: z.record(z.any()).optional(),
       projectName: z.string().default('default_collection').describe('專案名稱'),
+      filePath: z.string().optional().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
     },
   },
   async param => {
@@ -75,6 +76,7 @@ server.registerTool(
           name: param.name,
           namespace: param.namespace || '',
           projectName: param.projectName,
+          filePath: param.filePath, // Store filePath in metadata as well
         },
       });
 
@@ -82,12 +84,17 @@ server.registerTool(
         `vector-add: adding document to Chroma with metadata: ${JSON.stringify(document.metadata)}`
       );
 
-      await addDocumentsToChroma(chromaStore, [document]);
+      // If filePath is provided, use it as the document ID for upsert
+      const options = param.filePath ? { ids: [param.filePath] } : undefined;
+      await addDocumentsToChroma(chromaStore, [document], options);
 
-      logger.info(`vector-add: document added to collection "${param.projectName}" successfully`);
+      logger.info(`vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${param.projectName}" successfully`);
 
       return {
-        content: [{ type: 'text', text: 'Document added to vector database successfully.' }],
+        content: [{ 
+          type: 'text', 
+          text: `Document ${param.filePath ? 'upserted' : 'added'} to vector database successfully.` 
+        }],
       };
     } catch (error: any) {
       logger.error('Chroma add error:', error);
