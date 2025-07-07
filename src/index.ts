@@ -226,11 +226,21 @@ server.registerTool(
 
       // 根据摘要类型选择不同的生成函数
       if (param.summaryType === 'guidelines') {
-        generateProjectGuidelines(projectDir, param.targetDir, outputFile, OPENAI_API_KEY).catch(error => {
+        await generateProjectGuidelines(
+          projectDir,
+          param.targetDir,
+          outputFile,
+          OPENAI_API_KEY
+        ).catch(error => {
           logger.error('Generate guidelines error:', error);
         });
       } else {
-        generateProjectOverview(projectDir, param.targetDir, outputFile, OPENAI_API_KEY).catch(error => {
+        await generateProjectOverview(
+          projectDir,
+          param.targetDir,
+          outputFile,
+          OPENAI_API_KEY
+        ).catch(error => {
           logger.error('Generate overview error:', error);
         });
       }
