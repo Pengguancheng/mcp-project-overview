@@ -44,7 +44,10 @@ server.registerTool(
       namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
       metadata: z.record(z.any()).optional(),
       projectName: z.string().default('default_collection').describe('專案名稱'),
-      filePath: z.string().optional().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
+      filePath: z
+        .string()
+        .optional()
+        .describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
     },
   },
   async param => {
@@ -90,13 +93,17 @@ server.registerTool(
       const options = param.filePath ? { ids: [param.filePath] } : undefined;
       await addDocumentsToChroma(chromaStore, [document], options);
 
-      logger.info(`vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${param.projectName}" successfully`);
+      logger.info(
+        `vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${param.projectName}" successfully`
+      );
 
       return {
-        content: [{ 
-          type: 'text', 
-          text: `Document ${param.filePath ? 'upserted' : 'added'} to vector database successfully.` 
-        }],
+        content: [
+          {
+            type: 'text',
+            text: `Document ${param.filePath ? 'upserted' : 'added'} to vector database successfully.`,
+          },
+        ],
       };
     } catch (error: any) {
       logger.error('Chroma add error:', error);
@@ -176,8 +183,11 @@ server.registerTool(
     description:
       '生成项目概览文档。此工具会分析指定目录下的所有源代码文件，为每个文件生成摘要，并将这些摘要整合到一个overview.md文件中。例如：{"targetDir":"./src", "overviewPath":"./docs/overview.md"}',
     inputSchema: {
-      targetDir: z.string().describe('要分析的目标目录路径'),
-      overviewPath: z.string().optional().describe('概览文档的输出路径，默认为项目根目录下的overview.md'),
+      targetDir: z.string().describe('要分析的目标目录絕對路径'),
+      overviewPath: z
+        .string()
+        .optional()
+        .describe('概览文档的输出絕對路径，默认为项目根目录下的overview.md'),
     },
   },
   async param => {
@@ -196,7 +206,9 @@ server.registerTool(
       logger.info(`generate-overview: received params: ${JSON.stringify(param)}`);
 
       const targetDir = path.resolve(param.targetDir);
-      const overviewPath = param.overviewPath ? path.resolve(param.overviewPath) : path.resolve('overview.md');
+      const overviewPath = param.overviewPath
+        ? path.resolve(param.overviewPath)
+        : path.resolve('overview.md');
 
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${overviewPath}`);
 
@@ -204,14 +216,14 @@ server.registerTool(
 
       return {
         content: [
-          { 
-            type: 'text', 
-            text: `Project overview generated successfully and saved to ${overviewPath}` 
+          {
+            type: 'text',
+            text: `Project overview generated successfully and saved to ${overviewPath}`,
           },
           {
             type: 'text',
-            text: '概览内容预览:\n\n' + result.substring(0, 500) + '...'
-          }
+            text: '概览内容预览:\n\n' + result.substring(0, 500) + '...',
+          },
         ],
       };
     } catch (error: any) {
