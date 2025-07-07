@@ -23,6 +23,11 @@ if (!OPENAI_API_KEY) {
   );
 }
 
+const PROJECT_NAME = process.env.PROJECT_NAME || '';
+if (!PROJECT_NAME) {
+  logger.warn('Warning: PROJECT_NAME not provided.');
+}
+
 // 1. 建立 MCP Server
 const server = new McpServer({
   name: 'project-overview-server',
@@ -45,34 +50,20 @@ server.registerTool(
       name: z.string().describe('類或函數的完整名稱'),
       namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
       metadata: z.record(z.any()).optional(),
-      projectName: z.string().default('default_collection').describe('專案名稱'),
-      filePath: z
-        .string()
-        .optional()
-        .describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
+      filePath: z.string().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
     },
   },
   async param => {
     try {
-      if (!OPENAI_API_KEY) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable.',
-            },
-          ],
-        };
-      }
       logger.info(`vector-add: received params: ${JSON.stringify(param)}`);
 
       // Initialize OpenAI embeddings
       const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
 
-      logger.info(`vector-add: initializing Chroma store for project: ${param.projectName}`);
+      logger.info(`vector-add: initializing Chroma store for project: ${PROJECT_NAME}`);
 
       // Initialize Chroma store with project name as collection name
-      const chromaStore = await initializeChromaStore(embeddings, param.projectName);
+      const chromaStore = await initializeChromaStore(embeddings, PROJECT_NAME);
 
       // Create a document and add it to Chroma
       const document = new Document({
@@ -82,7 +73,7 @@ server.registerTool(
           type: param.type,
           name: param.name,
           namespace: param.namespace || '',
-          projectName: param.projectName,
+          projectName: PROJECT_NAME,
           filePath: param.filePath, // Store filePath in metadata as well
         },
       });
@@ -96,7 +87,7 @@ server.registerTool(
       await addDocumentsToChroma(chromaStore, [document], options);
 
       logger.info(
-        `vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${param.projectName}" successfully`
+        `vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${PROJECT_NAME}" successfully`
       );
 
       return {
@@ -125,7 +116,6 @@ server.registerTool(
       '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
     inputSchema: {
       query: z.string().describe('搜索查詢'),
-      projectName: z.string().describe('專案名稱'),
       type: z.enum(['class', 'function']).optional().describe('過濾文檔類型'),
       name: z.string().optional().describe('過濾類或函數名稱'),
       namespace: z.string().optional().describe('過濾命名空間或路徑'),
@@ -133,34 +123,21 @@ server.registerTool(
   },
   async param => {
     try {
-      if (!OPENAI_API_KEY) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable.',
-            },
-          ],
-        };
-      }
-
       logger.info(`vector-search: received params: ${JSON.stringify(param)}`);
 
       // Initialize OpenAI embeddings
       const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
 
-      logger.info(`vector-search: initializing Chroma store for project: ${param.projectName}`);
+      logger.info(`vector-search: initializing Chroma store for project: ${PROJECT_NAME}`);
 
       // Initialize Chroma store with project name as collection name
-      const chromaStore = await initializeChromaStore(embeddings, param.projectName);
+      const chromaStore = await initializeChromaStore(embeddings, PROJECT_NAME);
 
       logger.info(`vector-search: searching similar documents for query: "${param.query}"`);
       // Search for similar documents
       const results = await searchSimilarDocuments(chromaStore, param.query);
 
-      logger.info(
-        `vector-search: found ${results.length} results in collection "${param.projectName}"`
-      );
+      logger.info(`vector-search: found ${results.length} results in collection "${PROJECT_NAME}"`);
 
       return {
         content: [
@@ -271,14 +248,14 @@ server.registerTool(
     description:
       '清除指定项目名称的向量数据库集合。此工具会删除与项目关联的所有向量数据。例如：{"projectName":"my-project"}',
     inputSchema: {
-      projectName: z.string().describe('要清除的项目名称（对应于Chroma集合名称）'),
+      projectName: z.string().optional().describe('要清除的项目名称（对应于Chroma集合名称）'),
     },
   },
   async param => {
     try {
       logger.info(`vector-clear: received params: ${JSON.stringify(param)}`);
 
-      await clearChromaCollection(param.projectName);
+      await clearChromaCollection(param.projectName ?? PROJECT_NAME);
 
       return {
         content: [
