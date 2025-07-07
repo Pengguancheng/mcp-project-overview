@@ -229,7 +229,7 @@ server.registerTool(
         content: [
           {
             type: 'text',
-            text: `Project overview generated successfully and saved to ${overviewPath}`,
+            text: `项目${param.summaryType === 'code_rules' ? '编码规范' : param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${overviewPath}`,
           },
         ],
       };
