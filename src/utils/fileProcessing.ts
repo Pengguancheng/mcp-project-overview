@@ -23,6 +23,7 @@ export async function loadFilesFromDirectory(
       '.js': path => new TextLoader(path),
       '.go': path => new TextLoader(path),
       '.cs': path => new TextLoader(path),
+      '.proto': path => new TextLoader(path),
     },
     true,
     'ignore'
