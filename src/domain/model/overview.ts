@@ -29,7 +29,7 @@ export class Overview implements IOverview {
     filePath: string,
     summary: string
   ) {
-    this.id = `${projectName}-${name}-${contentType}`;
+    this.id = `${filePath}-${contentType}-${name}`;
     this.name = name;
     this.content = content;
     this.projectName = projectName;
