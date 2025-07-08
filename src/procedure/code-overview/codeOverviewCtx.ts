@@ -31,7 +31,7 @@ export class CodeOverviewCtx extends BaseProcedureContext {
   }
 
   getContextString(): string {
-    return JSON.stringify(this);
+    return JSON.stringify({ projectName: this.projectName, overviews: this.overviews });
   }
 
   getLogger(): winston.Logger {

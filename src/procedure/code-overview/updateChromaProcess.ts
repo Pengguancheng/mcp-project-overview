@@ -33,7 +33,7 @@ export class UpdateChromaProcess extends BaseProcess implements IProUpdateChroma
             projectName: overview.projectName,
             filePath: overview.filePath,
             type: overview.contentType,
-            references: overview.references,
+            references: overview.references.join(','),
           },
         });
       });

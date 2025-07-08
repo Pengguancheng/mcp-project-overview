@@ -7,7 +7,7 @@ import { ChromaClient } from 'chromadb';
 import { name } from 'ts-jest/dist/transformers/hoist-jest';
 
 // 设置测试环境变量
-process.env.OPENAI_API_KEY = 'your-openai-api-key';
+process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 describe('Chroma Utilities', () => {
   let embeddings: OpenAIEmbeddings;
@@ -59,6 +59,38 @@ describe('Chroma Utilities', () => {
       expect(chromaStore).toBeDefined();
       expect(chromaStore instanceof Chroma).toBe(true);
     }, 15000);
+
+    it('should add success', async () => {
+      const doc = {
+        id: 'summary-strategy-OverviewSummaryRepository-interface',
+        name: 'OverviewSummaryRepository',
+        description:
+          'OverviewSummaryRepository 是交易策略概覽摘要的資料庫操作接口, \\n主要功能：\\n- Upsert: 新增或更新交易概覽摘要記錄\\n- FindById: 根據任務 ID 查詢特定的概覽摘要\\n- SortByCreatedAt: 依創建時間                                                                                             交易策略分析系統中的數據持久化\\n- 支援交易統計摘要的存儲                                                                                         合，為交易策略概覽摘要提供數據訪問層抽象。',
+        projectName: 'summary-strategy',
+        references: [
+          'strategy-summary/domain/model',
+          'strategy-summary/domain/model/OverviewSummary',
+        ],
+        contentType: 'interface',
+        filePath:
+          '/Users/pengpeng/Documents/10_trading_view/strategy-summary/domain/repository/overview_summary.go',
+      };
+      const testDocument = new Document({
+        pageContent: JSON.stringify(doc),
+        metadata: { ...doc },
+      });
+
+      try {
+        const chromaStore = await initializeChromaStore(embeddings, testCollectionName);
+        const result = await addDocumentsToChroma(chromaStore, [testDocument]);
+
+        expect(result).toBeDefined();
+        expect(Array.isArray(result)).toBe(true);
+        expect(result.length).toBe(1);
+      } catch (error) {
+        expect(error).toBeNull();
+      }
+    }, 20000);
   });
 
   describe('addDocumentsToChroma', () => {
