@@ -50,9 +50,20 @@ server.registerTool(
     inputSchema: {
       text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
       type: z.enum(['class', 'interface', 'function']).describe('文檔類型，可以是類、接口或函數'),
-      name: z.string().describe('類或函數的完整名稱'),
-      namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
-      filePath: z.string().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
+      name: z
+        .string()
+        .describe(
+          '類或函數的完整名稱 ex: model.Video, VideoSystem.Domain.Repository.UserRepository'
+        ),
+      namespace: z
+        .string()
+        .optional()
+        .describe('類或函數的命名空間或路徑 ex: repository, VideoSystem.Domain.Repository'),
+      filePath: z
+        .string()
+        .describe(
+          '項目內檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔 ex: project: strategy-summary, path: strategy-summary/domain/repository/overview_summary.go'
+        ),
       summary: z.string().describe('文檔的內文摘要'),
       references: z
         .array(z.string())
