@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { initializeOpenAIEmbeddings } from './utils/langchain';
@@ -14,6 +14,7 @@ import { Overview, OverviewType } from './domain/model/overview';
 import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
 import { Procedure } from './procedure/procedure';
 import { UpdateChromaProcess } from './procedure/code-overview/updateChromaProcess';
+import * as querystring from 'node:querystring';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -267,6 +268,66 @@ server.registerTool(
       logger.error('Chroma clear error:', error);
       return {
         content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
+      };
+    }
+  }
+);
+
+server.registerResource(
+  'query-project-vector-resource',
+  new ResourceTemplate('chroma://query/{queryString}', { list: undefined }),
+  {
+    title: 'get project code overview info use sentence query',
+    description: 'use query to get project code overview info',
+  },
+  async (uri: any, extra) => {
+    try {
+      // 解析查询参数
+      const url = new URL(uri);
+      const query: string = extra.queryString as string;
+
+      logger.info(`chroma-query resource: query="${query}", projectName="${PROJECT_NAME}"`);
+
+      if (!query) {
+        return {
+          contents: [
+            {
+              uri: uri,
+              mimeType: 'text/plain',
+              text: 'Error: Query parameter is required',
+            },
+          ],
+        };
+      }
+
+      // 初始化 OpenAI embeddings
+      const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
+
+      // 初始化 Chroma store
+      const chromaStore = await initializeChromaStore(embeddings, PROJECT_NAME);
+
+      // 搜索相似文档
+      const results = await searchSimilarDocuments(chromaStore, query);
+
+      return {
+        contents: [
+          {
+            uri: uri,
+            mimeType: 'text/plain',
+            text: JSON.stringify(results),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Chroma query resource error:', error);
+      return {
+        contents: [
+          {
+            uri: uri,
+            mimeType: 'text/plain',
+            text: `Error: ${error?.message || 'Unknown error occurred'}`,
+          },
+        ],
       };
     }
   }
