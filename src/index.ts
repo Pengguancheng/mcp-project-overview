@@ -83,6 +83,9 @@ server.registerTool(
 
       const pro = Procedure.new(ctx);
       await pro.execute(new UpdateChromaProcess());
+      if (pro.isErr()) {
+        throw pro.getErr()!;
+      }
 
       return {
         content: [
