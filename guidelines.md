@@ -87,9 +87,10 @@ When working with this project, Junie should:
 ### Working with Procedure Module
 The procedure module implements a structured approach to executing processes:
 - Use the `Procedure` class to execute processes in sequence
-- Implement the `Process` interface for new processes
-- Extend `IProcedureContext` for custom contexts
+- Implement the `IProcess` interface or extend the `BaseProcess` abstract class for new processes
+- Extend `IProcedureContext` and `BaseProcedureContext` for custom contexts
 - Use the error handling mechanism for graceful failure handling
+- Check for errors using the `isErr()` and `getErr()` methods
 
 ### Working with Domain Models
 The domain module contains models that represent core business entities:
@@ -115,9 +116,29 @@ The project supports generating both overviews and guidelines:
 ### Procedure Execution Framework
 The procedure module provides a structured way to execute processes:
 - `IProcedureContext`: Interface for context objects with methods for getting context information and logger
-- `Process`: Interface for processes that can be executed within a procedure
-- `ContextProcedure`: Maintains state of procedure execution, including error tracking and execution stack
-- `Procedure`: Main class that executes processes, handles errors, and manages execution flow
+- `IProcess<TCtx>`: Interface for processes that can be executed within a procedure with a specific context type
+- `BaseProcess`: Abstract class that implements the IProcess interface and provides a base for process implementations
+- `BaseProcedureContext`: Maintains state of procedure execution, including error tracking and execution stack
+- `Procedure<TCtx>`: Main class that executes processes, handles errors, and manages execution flow
+
+#### Example Usage:
+```typescript
+// Create a context
+const ctx = await CodeOverviewCtx.from(projectName, openAiKey);
+
+// Create a procedure with the context
+const procedure = Procedure.new(ctx);
+
+// Execute processes
+await procedure
+  .execute(new SomeProcess())
+  .execute(new AnotherProcess());
+
+// Check for errors
+if (procedure.isErr()) {
+  console.error('Procedure failed:', procedure.getErr());
+}
+```
 
 ### Overview Context
 The overview context connects procedures with domain models and external services:

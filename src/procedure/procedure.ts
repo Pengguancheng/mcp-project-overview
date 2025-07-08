@@ -83,7 +83,7 @@ export class Procedure<TCtx extends IProcedureContext> {
   }
 
   public isErr(): boolean {
-    return !this.contextProcedure.err;
+    return !!this.contextProcedure.err;
   }
 
   public getErr(): Error | null {
