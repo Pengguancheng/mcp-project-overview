@@ -123,7 +123,10 @@ server.registerTool(
       '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/interface/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
     inputSchema: {
       query: z.string().describe('搜索查詢'),
-      type: z.enum(['class', 'interface', 'function']).optional().describe('過濾文檔類型'),
+      type: z
+        .string()
+        .optional()
+        .describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
       name: z.string().optional().describe('過濾類或函數名稱'),
       namespace: z.string().optional().describe('過濾命名空間或路徑'),
     },
@@ -149,7 +152,7 @@ server.registerTool(
       return {
         content: [
           { type: 'text', text: 'Search results:' },
-          { type: 'text', text: JSON.stringify(results, null, 2) },
+          { type: 'text', text: JSON.stringify(results) },
         ],
       };
     } catch (error: any) {

@@ -99,7 +99,7 @@ export async function generateFileOverview(
 檔案路徑: ${filePath}
 專案名稱: ${projectName}
 檔案內容:
-${fileContent}
+${fileContent.trim()}
 
 ${generateOverviewPrompt()}
 `;
