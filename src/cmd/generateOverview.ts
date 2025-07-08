@@ -130,7 +130,7 @@ ${generateOverviewPrompt()}
     });
   } catch (error: any) {
     logger.error('生成檔案 overview 時出錯:', error);
-    return Promise.reject(error);
+    return [];
   }
 }
 
@@ -164,6 +164,9 @@ export async function generateProjectOverview(
 
     // 将 Overview 对象添加到 ctx 中
     for (const overviewList of overviewResponse) {
+      if (overviewList.length === 0) {
+        continue;
+      }
       ctx.addOverview(overviewList);
     }
 
