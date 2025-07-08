@@ -7,13 +7,27 @@ export interface IProcedureContext {
   getLogger(): Logger;
 }
 
-export interface Process<TCtx extends IProcedureContext> {
+export interface IProcess<TCtx extends IProcedureContext> {
   getProcessId(): string;
   process(ctx: TCtx): Promise<void> | void;
 }
 
+export abstract class BaseProcess implements IProcess<IProcedureContext> {
+  public processId: string;
+
+  protected constructor(processId: string) {
+    this.processId = processId;
+  }
+
+  public getProcessId(): string {
+    return this.processId;
+  }
+
+  abstract process(ctx: IProcedureContext): Promise<void> | void;
+}
+
 // procedure.ts
-export class ContextProcedure {
+export class BaseProcedureContext {
   public err: Error | null = null;
   public logger: Logger;
   public stack: string[] = [];
@@ -25,18 +39,18 @@ export class ContextProcedure {
 
 export class Procedure<TCtx extends IProcedureContext> {
   public ctx: TCtx;
-  public contextProcedure: ContextProcedure;
+  public contextProcedure: BaseProcedureContext;
 
   constructor(ctx: TCtx) {
     this.ctx = ctx;
-    this.contextProcedure = new ContextProcedure(ctx.getLogger());
+    this.contextProcedure = new BaseProcedureContext(ctx.getLogger());
   }
 
   public static new<TCtx extends IProcedureContext>(ctx: TCtx): Procedure<TCtx> {
     return new Procedure(ctx);
   }
 
-  public async execute(process: Process<TCtx>): Promise<Procedure<TCtx>> {
+  public async execute(process: IProcess<TCtx>): Promise<Procedure<TCtx>> {
     if (this.contextProcedure.err) {
       return this;
     }

@@ -1,4 +1,3 @@
-// src/index.ts
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -14,6 +13,10 @@ import logger from './utils/logger';
 import { generateProjectOverview } from './cmd/generateOverview';
 import * as path from 'path';
 import { generateProjectGuidelines } from './cmd/generateProjectGuidelines';
+import { Overview, OverviewType } from './domain/model/overview';
+import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
+import { BaseProcedureContext, Procedure } from './procedure/procedure';
+import { UpdateChromaProcess } from './procedure/code-overview/updateChromaProcess';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -43,14 +46,17 @@ server.registerTool(
   {
     title: 'Vector Add',
     description:
-      '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/function)以及使用方法描述。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project", "filePath":"/path/to/file.ts"}',
+      '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/interface/function)以及使用方法描述。references 參數用於記錄被該檔案引用的其他檔案、類別或路徑。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project", "filePath":"/path/to/file.ts", "references":["src/models/User.ts", "app.services.Database", "@langchain/core"]}',
     inputSchema: {
       text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
-      type: z.enum(['class', 'function']).describe('文檔類型，可以是類或函數'),
+      type: z.enum(['class', 'interface', 'function']).describe('文檔類型，可以是類、接口或函數'),
       name: z.string().describe('類或函數的完整名稱'),
       namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
-      metadata: z.record(z.any()).optional(),
       filePath: z.string().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
+      references: z
+        .array(z.string())
+        .optional()
+        .describe('被該檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
     },
   },
   async param => {
@@ -62,39 +68,27 @@ server.registerTool(
 
       logger.info(`vector-add: initializing Chroma store for project: ${PROJECT_NAME}`);
 
-      // Initialize Chroma store with project name as collection name
-      const chromaStore = await initializeChromaStore(embeddings, PROJECT_NAME);
-
-      // Create a document and add it to Chroma
-      const document = new Document({
-        pageContent: param.text,
-        metadata: {
-          ...param.metadata,
-          type: param.type,
-          name: param.name,
-          namespace: param.namespace || '',
-          projectName: PROJECT_NAME,
-          filePath: param.filePath, // Store filePath in metadata as well
-        },
-      });
-
-      logger.info(
-        `vector-add: adding document to Chroma with metadata: ${JSON.stringify(document.metadata)}`
+      // Create an Overview instance
+      const overview = new Overview(
+        param.name,
+        param.text,
+        PROJECT_NAME,
+        param.references || [],
+        param.type as OverviewType,
+        param.filePath
       );
 
-      // If filePath is provided, use it as the document ID for upsert
-      const options = param.filePath ? { ids: [param.filePath] } : undefined;
-      await addDocumentsToChroma(chromaStore, [document], options);
+      const ctx = await CodeOverviewCtx.from(PROJECT_NAME, OPENAI_API_KEY);
+      ctx.addOverview(overview);
 
-      logger.info(
-        `vector-add: document ${param.filePath ? 'upserted' : 'added'} to collection "${PROJECT_NAME}" successfully`
-      );
+      const pro = Procedure.new(ctx);
+      await pro.execute(new UpdateChromaProcess());
 
       return {
         content: [
           {
             type: 'text',
-            text: `Document ${param.filePath ? 'upserted' : 'added'} to vector database successfully.`,
+            text: `Overview ${param.filePath ? 'upserted' : 'added'} to vector database successfully. ID: ${overview.id}`,
           },
         ],
       };
@@ -113,10 +107,10 @@ server.registerTool(
   {
     title: 'Vector Search',
     description:
-      '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
+      '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/interface/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
     inputSchema: {
       query: z.string().describe('搜索查詢'),
-      type: z.enum(['class', 'function']).optional().describe('過濾文檔類型'),
+      type: z.enum(['class', 'interface', 'function']).optional().describe('過濾文檔類型'),
       name: z.string().optional().describe('過濾類或函數名稱'),
       namespace: z.string().optional().describe('過濾命名空間或路徑'),
     },
