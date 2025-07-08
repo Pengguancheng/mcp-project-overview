@@ -10,7 +10,6 @@ import {
 import logger from './utils/logger';
 import { generateProjectOverview } from './cmd/generateOverview';
 import * as path from 'path';
-import { generateProjectGuidelines } from './cmd/generateProjectGuidelines';
 import { Overview, OverviewType } from './domain/model/overview';
 import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
 import { Procedure } from './procedure/procedure';
@@ -179,9 +178,9 @@ server.registerTool(
         .optional()
         .describe('概览文档的输出路径（相对于项目根目录的路径），默认为项目根目录下的overview.md'),
       summaryType: z
-        .enum(['overview', 'guidelines'])
+        .enum(['overview'])
         .default('overview')
-        .describe('摘要类型：overview（项目概览）、guidelines（开发指南）'),
+        .describe('摘要类型：overview（项目概览）'),
     },
   },
   async param => {
@@ -212,32 +211,21 @@ server.registerTool(
 
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${outputFile}`);
 
-      // 根据摘要类型选择不同的生成函数
-      if (param.summaryType === 'guidelines') {
-        await generateProjectGuidelines(
-          projectDir,
-          param.targetDir,
-          outputFile,
-          OPENAI_API_KEY
-        ).catch(error => {
-          logger.error('Generate guidelines error:', error);
-        });
-      } else {
-        await generateProjectOverview(
-          projectDir,
-          param.targetDir,
-          OPENAI_API_KEY,
-          PROJECT_NAME
-        ).catch(error => {
-          logger.error('Generate overview error:', error);
-        });
-      }
+      // 生成项目概览
+      await generateProjectOverview(
+        projectDir,
+        param.targetDir,
+        OPENAI_API_KEY,
+        PROJECT_NAME
+      ).catch(error => {
+        logger.error('Generate overview error:', error);
+      });
 
       return {
         content: [
           {
             type: 'text',
-            text: `项目${param.summaryType === 'guidelines' ? '开发者指南' : '概览'}文档生成成功，已保存至 ${outputFile}`,
+            text: `项目概览文档生成成功，已保存至 ${outputFile}`,
           },
         ],
       };
