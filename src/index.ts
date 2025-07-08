@@ -53,6 +53,7 @@ server.registerTool(
       name: z.string().describe('類或函數的完整名稱'),
       namespace: z.string().optional().describe('類或函數的命名空間或路徑'),
       filePath: z.string().describe('檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔'),
+      summary: z.string().describe('文檔的內文摘要'),
       references: z
         .array(z.string())
         .optional()
@@ -75,7 +76,8 @@ server.registerTool(
         PROJECT_NAME,
         param.references || [],
         param.type as OverviewType,
-        param.filePath
+        param.filePath,
+        param.summary
       );
 
       const ctx = await CodeOverviewCtx.from(PROJECT_NAME, OPENAI_API_KEY);

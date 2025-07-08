@@ -3,35 +3,39 @@ export type OverviewType = 'class' | 'interface' | 'function';
 export interface IOverview {
   id: string;
   name: string;
-  description: string;
+  content: string;
   projectName: string;
   references: string[];
   contentType: OverviewType;
+  summary: string;
 }
 
 export class Overview implements IOverview {
   public contentType: OverviewType;
-  public description: string;
+  public content: string;
   public id: string;
   public name: string;
   public projectName: string;
   public references: string[];
   public filePath: string;
+  public summary: string;
 
   constructor(
     name: string,
-    description: string,
+    content: string,
     projectName: string,
     references: string[],
     contentType: OverviewType,
-    filePath: string
+    filePath: string,
+    summary: string
   ) {
     this.id = `${projectName}-${name}-${contentType}`;
     this.name = name;
-    this.description = description;
+    this.content = content;
     this.projectName = projectName;
     this.references = references;
     this.contentType = contentType;
     this.filePath = filePath;
+    this.summary = summary;
   }
 }
