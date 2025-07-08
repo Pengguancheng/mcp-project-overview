@@ -38,7 +38,7 @@ export class CodeOverviewCtx extends BaseProcedureContext {
     return logger;
   }
 
-  public addOverview(overview: Overview): void {
-    this.overviews.push(overview);
+  public addOverview(overview: Overview[]): void {
+    this.overviews.push(...overview);
   }
 }

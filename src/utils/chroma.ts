@@ -31,6 +31,9 @@ export const addDocumentsToChroma = async (
   documents: Document[],
   options?: { ids?: string[] }
 ): Promise<string[]> => {
+  if (options?.ids) {
+    await chromaStore.delete({ ids: options.ids });
+  }
   return await chromaStore.addDocuments(documents, options);
 };
 

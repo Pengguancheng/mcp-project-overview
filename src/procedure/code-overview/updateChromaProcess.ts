@@ -1,6 +1,7 @@
 import { BaseProcedureContext, BaseProcess, IProcess } from '../procedure';
 import { CodeOverviewCtx } from './codeOverviewCtx';
 import { Document } from '@langchain/core/documents';
+import { addDocumentsToChroma } from '../../utils/chroma';
 
 export interface IProUpdateChroma extends IProcess<CodeOverviewCtx> {}
 
@@ -43,9 +44,9 @@ export class UpdateChromaProcess extends BaseProcess implements IProUpdateChroma
 
       // 批量添加文档到 Chroma
       // 使用 filePath 作为 document ID 来支持更新操作
-      const ids = ctx.overviews.map(overview => overview.filePath);
+      const ids = ctx.overviews.map(overview => overview.id);
 
-      await ctx.chroma.addDocuments(documents, { ids });
+      await addDocumentsToChroma(ctx.chroma, documents, { ids });
 
       ctx.getLogger().info(`成功向 Chroma 添加/更新了 ${documents.length} 个文档`);
     } catch (error: any) {

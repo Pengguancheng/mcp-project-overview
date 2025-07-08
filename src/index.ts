@@ -46,7 +46,7 @@ server.registerTool(
       '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/interface/function)以及使用方法描述。references 參數用於記錄被該檔案引用的其他檔案、類別或路徑。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project", "filePath":"/path/to/file.ts", "references":["src/models/User.ts", "app.services.Database", "@langchain/core"]}',
     inputSchema: {
       text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
-      type: z.enum(['class', 'interface', 'function']).describe('文檔類型，可以是類、接口或函數'),
+      type: z.string().describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
       name: z
         .string()
         .describe(
@@ -89,7 +89,7 @@ server.registerTool(
       );
 
       const ctx = await CodeOverviewCtx.from(PROJECT_NAME, OPENAI_API_KEY);
-      ctx.addOverview(overview);
+      ctx.addOverview([overview]);
 
       const pro = Procedure.new(ctx);
       await pro.execute(new UpdateChromaProcess());

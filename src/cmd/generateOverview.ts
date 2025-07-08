@@ -12,8 +12,12 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 // 定义 Overview schema
 export const OVERVIEW_SCHEMA = {
-  text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
-  type: z.enum(['class', 'interface', 'function']).describe('文檔類型，可以是類、接口或函數'),
+  text: z
+    .string()
+    .describe(
+      '類別、接口或函數的說明文，需包含清楚的功能摘要、用途介紹，以及常見的使用情境範例，內容不可為空。應讓讀者僅憑該欄即可理解此元素的作用與基本用法。'
+    ),
+  type: z.string().describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
   name: z
     .string()
     .describe('類或函數的完整名稱 ex: model.Video, VideoSystem.Domain.Repository.UserRepository'),
@@ -26,12 +30,43 @@ export const OVERVIEW_SCHEMA = {
     .describe(
       '項目內檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔 ex: project: strategy-summary, path: strategy-summary/domain/repository/overview_summary.go'
     ),
-  summary: z.string().describe('文檔的內文摘要'),
+  summary: z
+    .string()
+    .describe(
+      '此類別、接口或函數的重點摘要，應用簡要語句清楚說明其核心功能與設計目的。內容不可為空。'
+    ),
   references: z
     .array(z.string())
     .optional()
     .describe('被該檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
 };
+
+// 收集 schema 各欄位說明
+function extractFieldDescriptions(schema: any): Record<string, string> {
+  const descs: Record<string, string> = {};
+  for (const key in schema) {
+    if (schema[key]?.description) {
+      descs[key] = schema[key].description;
+    } else if (typeof schema[key]?._def?.description === 'string') {
+      descs[key] = schema[key]._def.description;
+    }
+  }
+  return descs;
+}
+
+// 動態組 prompt 範本
+function generateOverviewPrompt(): string {
+  const fieldDescs = extractFieldDescriptions(OVERVIEW_SCHEMA);
+  return `
+請根據以下欄位規則，為指定的程式碼生成結構化概覽，各欄位說明如下：
+
+${Object.entries(fieldDescs)
+  .map(([field, desc]) => `- ${field}: ${desc}`)
+  .join('\n')}
+
+請確保內容完全符合每個欄位的說明，所有必填欄位不可空白，並優先聚焦功能摘要、設計目的與使用情境範例。
+`;
+}
 
 /**
  * 使用 LLM 將檔案整理成 overview 格式
@@ -44,10 +79,10 @@ export async function generateFileOverview(
   apiKey: string,
   projectName: string,
   filePath: string
-): Promise<Overview> {
+): Promise<Overview[]> {
   try {
     // Initialize OpenAI LLM
-    const llm = initializeOpenAIModel(apiKey, 'gpt-4.1-mini');
+    const llm = initializeOpenAIModel(apiKey, 'gpt-4.1-nano');
 
     // Read file content
     const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -55,17 +90,22 @@ export async function generateFileOverview(
     logger.info(`正在分析檔案: ${filePath}`);
 
     // 創建 Zod schema 對象
-    const zodSchema = z.object(OVERVIEW_SCHEMA);
+    const zodSchema = z.object({ overviews: z.array(z.object(OVERVIEW_SCHEMA)) });
     const jsonSchema = zodToJsonSchema(zodSchema); // <- 重要
 
-    const response = await llm.withStructuredOutput(jsonSchema).invoke(` 
-請分析以下檔案內容，並將其整理成結構化的 overview 格式。
+    const prompt = ` 
+請分析以下檔案內容，並將其整理成結構化的 overviews 格式。
 
 檔案路徑: ${filePath}
 專案名稱: ${projectName}
 檔案內容:
 ${fileContent}
-`);
+
+${generateOverviewPrompt()}
+`;
+    logger.info(`LLM prompt: ${prompt}`);
+
+    const response = await llm.withStructuredOutput(jsonSchema).invoke(prompt);
 
     logger.info(`LLM 響應: ${JSON.stringify(response)}`);
 
@@ -73,22 +113,24 @@ ${fileContent}
     const validatedSchema = zodSchema.parse(response);
 
     // 創建並返回 Overview 對象
-    const overview = new Overview(
-      validatedSchema.name,
-      validatedSchema.text,
-      projectName,
-      validatedSchema.references || [],
-      validatedSchema.type as OverviewType,
-      validatedSchema.filePath,
-      validatedSchema.summary
-    );
 
-    logger.info(`成功生成 overview 對象: ${overview.id}`);
+    return validatedSchema.overviews.map(schema => {
+      const overview = new Overview(
+        schema.name,
+        schema.text,
+        projectName,
+        schema.references || [],
+        schema.type as OverviewType,
+        schema.filePath,
+        schema.summary
+      );
 
-    return overview;
+      logger.info(`成功生成 overview 對象: ${overview.id}`);
+      return overview;
+    });
   } catch (error: any) {
     logger.error('生成檔案 overview 時出錯:', error);
-    throw error;
+    return Promise.reject(error);
   }
 }
 
@@ -115,14 +157,14 @@ export async function generateProjectOverview(
     });
 
     // Wait for all summaries to complete
-    const overviews = await Promise.all(summaryPromises);
+    const overviewResponse = await Promise.all(summaryPromises);
 
     // 初始化 CodeOverviewCtx
     const ctx = await CodeOverviewCtx.from(projectName, apiKey);
 
     // 将 Overview 对象添加到 ctx 中
-    for (const overview of overviews) {
-      ctx.addOverview(overview);
+    for (const overviewList of overviewResponse) {
+      ctx.addOverview(overviewList);
     }
 
     // 执行 UpdateChromaProcess 将 Overview 对象存储到 Chroma 中
@@ -131,7 +173,7 @@ export async function generateProjectOverview(
     if (pro.isErr()) {
       logger.error('Error storing file summaries in Chroma:', pro.getErr());
     } else {
-      logger.info(`Successfully stored ${overviews.length} file summaries in Chroma`);
+      logger.info(`Successfully stored ${overviewResponse.length} file summaries in Chroma`);
     }
 
     logger.info('Finish storing file summaries in Chroma...');
