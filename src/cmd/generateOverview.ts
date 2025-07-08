@@ -1,13 +1,7 @@
 import * as path from 'path';
 import { initializeOpenAIModel } from '../utils/langchain';
 import logger from '../utils/logger';
-import {
-  loadFilesFromDirectory,
-  groupDocumentsBySource,
-  generateFileSummary,
-  readExistingOverview,
-  writeOverviewToFile,
-} from '../utils/fileProcessing';
+import { groupDocumentsBySource, loadFilesFromDirectory } from '../utils/fileProcessing';
 import { Overview, OverviewType } from '../domain/model/overview';
 import { CodeOverviewCtx } from '../procedure/code-overview/codeOverviewCtx';
 import { Procedure } from '../procedure/procedure';
@@ -15,12 +9,6 @@ import { UpdateChromaProcess } from '../procedure/code-overview/updateChromaProc
 import * as fs from 'fs';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import {
-  ChatPromptTemplate,
-  HumanMessagePromptTemplate,
-  PromptTemplate,
-} from '@langchain/core/prompts';
-import { HumanMessage } from '@langchain/core/messages';
 
 // 定义 Overview schema
 export const OVERVIEW_SCHEMA = {
@@ -79,7 +67,7 @@ export async function generateFileOverview(
 ${fileContent}
 `);
 
-    logger.info(`LLM 響應: ${response}`);
+    logger.info(`LLM 響應: ${JSON.stringify(response)}`);
 
     // 使用 Zod schema 驗證解析的結果
     const validatedSchema = zodSchema.parse(response);
