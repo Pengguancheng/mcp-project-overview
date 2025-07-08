@@ -1,21 +1,19 @@
-import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { initializeOpenAIEmbeddings } from './utils/langchain';
 import {
-  addDocumentsToChroma,
   clearChromaCollection,
   initializeChromaStore,
   searchSimilarDocuments,
 } from './utils/chroma';
-import { Document } from '@langchain/core/documents';
 import logger from './utils/logger';
 import { generateProjectOverview } from './cmd/generateOverview';
 import * as path from 'path';
 import { generateProjectGuidelines } from './cmd/generateProjectGuidelines';
 import { Overview, OverviewType } from './domain/model/overview';
 import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
-import { BaseProcedureContext, Procedure } from './procedure/procedure';
+import { Procedure } from './procedure/procedure';
 import { UpdateChromaProcess } from './procedure/code-overview/updateChromaProcess';
 
 // Get OpenAI API key from environment variable
@@ -39,7 +37,6 @@ const server = new McpServer({
   description:
     '基于Model Context Protocol (MCP)的代码项目分析工具，支持项目结构分析、文件内容分析以及通过Chroma向量数据库进行语义搜索',
 });
-
 // 4. 註冊一個用於添加文檔到 Chroma 的 Tool
 server.registerTool(
   'vector-add',
@@ -226,8 +223,8 @@ server.registerTool(
         await generateProjectOverview(
           projectDir,
           param.targetDir,
-          outputFile,
-          OPENAI_API_KEY
+          OPENAI_API_KEY,
+          PROJECT_NAME
         ).catch(error => {
           logger.error('Generate overview error:', error);
         });

@@ -8,40 +8,114 @@ import {
   readExistingOverview,
   writeOverviewToFile,
 } from '../utils/fileProcessing';
+import { Overview, OverviewType } from '../domain/model/overview';
+import { CodeOverviewCtx } from '../procedure/code-overview/codeOverviewCtx';
+import { Procedure } from '../procedure/procedure';
+import { UpdateChromaProcess } from '../procedure/code-overview/updateChromaProcess';
+import * as fs from 'fs';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import {
+  ChatPromptTemplate,
+  HumanMessagePromptTemplate,
+  PromptTemplate,
+} from '@langchain/core/prompts';
+import { HumanMessage } from '@langchain/core/messages';
 
-// 定义不同的摘要类型
-export type SummaryType = 'overview' | 'guidelines';
+// 定义 Overview schema
+export const OVERVIEW_SCHEMA = {
+  text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
+  type: z.enum(['class', 'interface', 'function']).describe('文檔類型，可以是類、接口或函數'),
+  name: z
+    .string()
+    .describe('類或函數的完整名稱 ex: model.Video, VideoSystem.Domain.Repository.UserRepository'),
+  namespace: z
+    .string()
+    .optional()
+    .describe('類或函數的命名空間或路徑 ex: repository, VideoSystem.Domain.Repository'),
+  filePath: z
+    .string()
+    .describe(
+      '項目內檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔 ex: project: strategy-summary, path: strategy-summary/domain/repository/overview_summary.go'
+    ),
+  summary: z.string().describe('文檔的內文摘要'),
+  references: z
+    .array(z.string())
+    .optional()
+    .describe('被該檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
+};
 
 /**
- * 生成项目概览文档
- * @param projectDir 项目根目录的绝对路径
- * @param targetDir 目标目录（相对于项目根目录的路径）
- * @param existingOverviewPath 现有概览文档路径（相对于项目根目录的路径）
- * @param apiKey OpenAI API 密钥
- * @param summaryType 摘要类型（已废弃，保留参数兼容旧代码）
- * @returns 生成的概览文档内容
+ * 使用 LLM 將檔案整理成 overview 格式
+ * @param apiKey OpenAI API 密鑰
+ * @param projectName 專案名稱
+ * @param filePath 檔案路徑
+ * @returns Overview 對象
  */
-export async function generateProjectOverview(
-  projectDir: string,
-  targetDir: string,
-  existingOverviewPath: string = 'overview.md',
+export async function generateFileOverview(
   apiKey: string,
-  summaryType?: SummaryType
-): Promise<string> {
+  projectName: string,
+  filePath: string
+): Promise<Overview> {
   try {
     // Initialize OpenAI LLM
     const llm = initializeOpenAIModel(apiKey, 'gpt-4.1-mini');
 
+    // Read file content
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+
+    logger.info(`正在分析檔案: ${filePath}`);
+
+    // 創建 Zod schema 對象
+    const zodSchema = z.object(OVERVIEW_SCHEMA);
+    const jsonSchema = zodToJsonSchema(zodSchema); // <- 重要
+
+    const response = await llm.withStructuredOutput(jsonSchema).invoke(` 
+請分析以下檔案內容，並將其整理成結構化的 overview 格式。
+
+檔案路徑: ${filePath}
+專案名稱: ${projectName}
+檔案內容:
+${fileContent}
+`);
+
+    logger.info(`LLM 響應: ${response}`);
+
+    // 使用 Zod schema 驗證解析的結果
+    const validatedSchema = zodSchema.parse(response);
+
+    // 創建並返回 Overview 對象
+    const overview = new Overview(
+      validatedSchema.name,
+      validatedSchema.text,
+      projectName,
+      validatedSchema.references || [],
+      validatedSchema.type as OverviewType,
+      validatedSchema.filePath,
+      validatedSchema.summary
+    );
+
+    logger.info(`成功生成 overview 對象: ${overview.id}`);
+
+    return overview;
+  } catch (error: any) {
+    logger.error('生成檔案 overview 時出錯:', error);
+    throw error;
+  }
+}
+
+export async function generateProjectOverview(
+  projectDir: string,
+  targetDir: string,
+  apiKey: string,
+  projectName: string
+): Promise<void> {
+  try {
     // Resolve target directory as absolute path
     const absoluteTargetDir = path.resolve(projectDir, targetDir);
 
-    // Resolve existing overview path as absolute path
-    const absoluteOverviewPath = path.resolve(projectDir, existingOverviewPath);
-
     // Load all files from the target directory
     const allDocs = await loadFilesFromDirectory(absoluteTargetDir);
-
-    const filePaths = allDocs.map(doc => doc.metadata.source as string);
 
     // Group documents by source file
     const docsBySource = groupDocumentsBySource(allDocs);
@@ -49,79 +123,30 @@ export async function generateProjectOverview(
     // Generate summaries for each file in parallel
     logger.info(`Summarizing each file in parallel for overview...`);
     const summaryPromises = Object.entries(docsBySource).map(async ([src, docs]) => {
-      // 使用默认提示词生成概览摘要
-      const summary = await generateFileSummary(docs, llm, {
-        mapPrompt: '提炼每个文件或模块的核心功能和可复用代码要点，帮助不熟悉项目的人快速了解',
-      });
-
-      const relativePath = path.relative(projectDir, src);
-      logger.info(`  • ${src} → ${summary.slice(0, 60).replace(/\n/g, ' ')}...`);
-      return { filePath: relativePath, absolutePath: src, summary };
+      return await generateFileOverview(apiKey, projectName, src);
     });
 
     // Wait for all summaries to complete
-    const fileSummaries = await Promise.all(summaryPromises);
+    const overviews = await Promise.all(summaryPromises);
 
-    // Read existing overview
-    logger.info('Merging summaries into overview.md...');
-    const existing = readExistingOverview(absoluteOverviewPath);
+    // 初始化 CodeOverviewCtx
+    const ctx = await CodeOverviewCtx.from(projectName, apiKey);
 
-    // 不直接判断哪些文件被移除，而是将所有路径提供给 LLM 进行判断
-    logger.info(`Providing file paths to LLM for existence check`);
+    // 将 Overview 对象添加到 ctx 中
+    for (const overview of overviews) {
+      ctx.addOverview(overview);
+    }
 
-    // Construct integration prompt for overview
-    const combinePrompt = `
-你是一位资深后端架构师，负责整理一份面向团队的 project overview
-请根据现有的 overview.md 结构，生成更新后的项目概览，要求如下：
+    // 执行 UpdateChromaProcess 将 Overview 对象存储到 Chroma 中
+    const pro = Procedure.new(ctx);
+    await pro.execute(new UpdateChromaProcess());
+    if (pro.isErr()) {
+      logger.error('Error storing file summaries in Chroma:', pro.getErr());
+    } else {
+      logger.info(`Successfully stored ${overviews.length} file summaries in Chroma`);
+    }
 
-1. **目录结构**：以 Markdown 格式输出项目目录，列出文件和文件夹，并在每一项前添加專案路径。
-2. **精简描述**：在“概览”章节中，使用不超过三行的简洁语言，提炼每个文件或模块的核心功能和可复用代码要点，帮助不熟悉项目的人快速了解。
-3. **基础内容**：以现有 overview.md 为基础，保留有效内容，优先用最新摘要更新对应章节
-
----
-## 項目功能模組 summary
-summary group by module
-
-## 项目路径
-
-${projectDir}
-
-### 此次讀取目標資料夾
-
-${targetDir}
-
-### 整合此次讀取檔案路徑到原有路徑
-
-${filePaths.map(p => `- \`${p}\``).join('\n')}
-
----
-
-## 现有 overview.md
-
-${existing}
-
----
-
-## 各文件精炼摘要
-
-${fileSummaries.map(fs => `### ${fs.filePath} \n ${fs.summary}`).join('\n\n')}
-
-`;
-
-    // Generate updated overview
-    const updatedOverview = await llm.invoke(combinePrompt);
-
-    // 记录日志
-    logger.info(`生成项目概览文档完成`);
-
-    // Write to overview.md
-    writeOverviewToFile(absoluteOverviewPath, updatedOverview.text);
-
-    logger.info(
-      `${path.basename(absoluteOverviewPath)} 已更新 (${fileSummaries.length} 个文件的项目概览已合并)`
-    );
-
-    return updatedOverview.text;
+    logger.info('Finish storing file summaries in Chroma...');
   } catch (error: any) {
     logger.error('生成项目概览时出错:', error);
     throw error;

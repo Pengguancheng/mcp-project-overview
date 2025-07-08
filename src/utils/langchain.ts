@@ -9,7 +9,8 @@ export const initializeOpenAIModel = (
   return new ChatOpenAI({
     openAIApiKey: apiKey,
     model: model,
-    temperature: 0.9,
+    temperature: 0.1,
+    timeout: 60000,
   });
 };
 
