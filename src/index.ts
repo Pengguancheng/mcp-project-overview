@@ -123,6 +123,7 @@ server.registerTool(
   },
   async param => {
     try {
+      logger.info(`vector-search: received params: ${JSON.stringify(param)}`);
       const { query, type, name, namespace, references, limit = 5 } = param;
       const projectName = PROJECT_NAME;
 
@@ -164,7 +165,7 @@ server.registerTool(
         ],
       };
     } catch (error) {
-      logger.error('向量搜尋錯誤:', error);
+      logger.error('向量搜尋錯誤:', (error as any).message);
       return {
         content: [
           {
