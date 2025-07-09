@@ -58,13 +58,23 @@ function extractFieldDescriptions(schema: any): Record<string, string> {
 function generateOverviewPrompt(): string {
   const fieldDescs = extractFieldDescriptions(OVERVIEW_SCHEMA);
   return `
-請根據以下欄位規則，為指定的程式碼生成結構化概覽，各欄位說明如下：
+你是一个专业的代码文档分析助手。请根据以下字段规则，为指定的代码生成结构化概览：
 
 ${Object.entries(fieldDescs)
-  .map(([field, desc]) => `- ${field}: ${desc}`)
-  .join('\n')}
+  .map(([field, desc]) => `**${field}**: ${desc}`)
+  .join('\n\n')}
 
-請確保內容完全符合每個欄位的說明，所有必填欄位不可空白，並優先聚焦功能摘要、設計目的與使用情境範例。
+**重要要求：**
+1. 所有描述都应该从开发者的角度出发，说明代码的实际用途
+2. 避免为单个属性、字段或配置项生成 overview
+3. 重点关注可复用的代码实体：类、接口、重要函数等
+4. 使用清晰、专业的技术语言
+5. 包含足够的上下文信息，让其他开发者能快速理解代码用途
+
+**输出格式要求：**
+- 请将结果包装在 overviews 数组中
+- 每个代码实体生成一个独立的 overview 对象
+- 确保所有必填字段都有内容，且内容有意义
 `;
 }
 
@@ -95,8 +105,6 @@ export async function generateFileOverview(
 
     const prompt = ` 
 請分析以下檔案內容，並將其整理成結構化的 overviews 格式。 
-請遵守以下規則
-* 避免對單一 property or column 產生 overview
 檔案路徑: ${filePath}
 專案名稱: ${projectName}
 檔案內容:

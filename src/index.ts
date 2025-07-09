@@ -98,15 +98,20 @@ server.registerTool(
   {
     title: 'Vector Search',
     description:
-      '通過語義搜索查找代碼文檔。您可以使用文本查詢搜索相似文檔，也可以按類型(class/interface/function)、名稱和命名空間進行過濾。範例1(基本搜索)：{"query":"如何處理用戶驗證", "projectName":"my-project"}。範例2(過濾搜索)：{"query":"數據庫操作", "type":"class", "namespace":"app.repositories", "projectName":"my-project"}',
+      '通过语义搜索查找项目代码文档。支持自然语言查询来搜索相关的类、函数、接口等代码实体。可以按以下方式使用：\n' +
+      '1. 自然语言查询：{"query":"用户认证相关的代码", "projectName":"my-project"}\n' +
+      '2. 功能性查询：{"query":"数据库操作", "projectName":"my-project"}\n' +
+      '3. 特定类型查询：{"query":"视频处理", "type":"class", "projectName":"my-project"}\n' +
+      '4. 命名空间过滤：{"query":"仓储模式", "namespace":"repository", "projectName":"my-project"}\n' +
+      '支持的查询类型包括：功能描述、设计模式、技术实现、业务逻辑等。',
     inputSchema: {
-      query: z.string().describe('搜索查詢'),
+      query: z.string().describe('自然语言搜索查询，可以是功能描述、技术关键词或业务需求'),
       type: z
         .string()
         .optional()
-        .describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
-      name: z.string().optional().describe('過濾類或函數名稱'),
-      namespace: z.string().optional().describe('過濾命名空間或路徑'),
+        .describe('过滤代码实体类型：class(类)、interface(接口)、function(函数)'),
+      name: z.string().optional().describe('过滤特定的类名或函数名'),
+      namespace: z.string().optional().describe('过滤特定的命名空间、包名或目录路径'),
     },
   },
   async param => {
@@ -255,8 +260,15 @@ server.registerResource(
   'query-project-vector-resource',
   new ResourceTemplate('chroma://query/{queryString}', { list: undefined }),
   {
-    title: 'get project code overview info use sentence query',
-    description: 'use query to get project code overview info',
+    title: '项目代码智能查询资源',
+    description:
+      '使用自然语言查询项目中的代码实体和文档。支持查询示例：\n' +
+      '• "视频模型相关的代码" - 查找视频相关的模型类\n' +
+      '• "用户仓储实现" - 查找用户数据访问层代码\n' +
+      '• "认证服务" - 查找认证相关的服务类\n' +
+      '• "数据库连接" - 查找数据库相关的代码\n' +
+      '• "API 控制器" - 查找控制器相关代码\n' +
+      '支持中文和英文查询，返回相关的代码片段、文档说明和使用示例。',
   },
   async (uri: any, extra) => {
     try {
