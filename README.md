@@ -34,370 +34,99 @@ This is a Node.js application built with TypeScript that implements an MCP serve
    npm install
    ```
 
-## Development
+## MCP Server 配置
 
-### Build the project
-
-```bash
-npm run build
-```
-
-This will compile TypeScript files from the `src` directory to JavaScript files in the `dist` directory.
-
-### Code Formatting
-
-This project uses [Prettier](https://prettier.io/) for code formatting. The configuration is defined in `.prettierrc` file.
-
-To format all files:
-
-```bash
-npm run format
-```
-
-To check if files are formatted correctly without modifying them:
-
-```bash
-npm run format:check
-```
-
-The code will be automatically formatted when you install the project dependencies (via the `prepare` script).
-
-### Command Line Parameters
-
-For LangChain and Chroma functionality, you need to provide the following parameters when running the application:
-
-```bash
-# Required for LangChain and Chroma vector embeddings
---openai-api-key YOUR_API_KEY
-
-# Optional, defaults to http://localhost:8000
---chroma-server-url YOUR_CHROMA_SERVER_URL
-```
-
-#### Authentication Parameters
-
-The server supports token-based authentication. You must either provide an authentication token or explicitly disable authentication:
-
-```bash
-# Option 1: Use token-based authentication (recommended)
---auth-token YOUR_AUTH_TOKEN
-
-# Option 2: Disable authentication (not recommended for production)
---DANGEROUSLY_OMIT_AUTH
-```
-
-You can also set these options using environment variables:
-- `AUTH_TOKEN`: Set to your authentication token
-- `DANGEROUSLY_OMIT_AUTH`: Set to "true" to disable authentication
-- `OPENAI_API_KEY`: Your OpenAI API key for LangChain and vector embeddings
-- `PROJECT_NAME`: The project name used for Chroma collections and vector operations
-
-When authentication is enabled, clients must include the `auth_token` parameter in their requests:
+要在您的編輯器或開發環境中整合 MCP Server，請使用以下配置：
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "method": "your-method",
-  "params": {
-    "auth_token": "YOUR_AUTH_TOKEN",
-    // other parameters...
-  },
-  "id": 1
+  "mcpServers": {
+    "chroma": {
+      "command": "node",
+      "args": [
+        "dist/index.js"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "PROJECT_NAME": "your-project-name"
+      }
+    }
+  }
 }
 ```
 
-You can pass these parameters directly to the command when running the application:
+### 環境變量說明
 
-```bash
-# Example for running the built application
-npm run start -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
+- `OPENAI_API_KEY`: 您的 OpenAI API 密鑰，用於生成嵌入和項目摘要
+- `PROJECT_NAME`: 項目名稱，用作 Chroma 集合名稱
+- `CHROMA_URL`: (可選) Chroma 數據庫服務器 URL，默認為 http://localhost:8000
 
-# Or with authentication disabled (not recommended for production)
-npm run start -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --DANGEROUSLY_OMIT_AUTH
+## MCP 使用範例
 
-# Or use the convenience script (you'll need to update it to include authentication parameters)
-npm run start:with-params
+### 添加代碼文檔到向量數據庫
+
+```typescript
+// 添加類文檔
+await mcpClient.callTool("vector-add", {
+  type: "class",
+  name: "UserRepository",
+  namespace: "app.repositories",
+  text: "負責用戶數據的 CRUD 操作，包含創建、讀取、更新和刪除用戶的方法。",
+  projectName: "my-project",
+  filePath: "src/repositories/UserRepository.ts",
+  summary: "用戶數據訪問層",
+  references: ["src/models/User.ts", "typeorm"]
+});
 ```
 
-For development mode:
+### 語義搜索代碼實體
 
-```bash
-# Example for running in development mode
-npm run dev -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
+```typescript
+// 自然語言查詢
+const results = await mcpClient.callTool("vector-search", {
+  query: "用戶認證相關的代碼",
+  projectName: "my-project",
+  limit: 5
+});
 
-# Or with authentication disabled (not recommended for production)
-npm run dev -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --DANGEROUSLY_OMIT_AUTH
+// 按類型過濾
+const classResults = await mcpClient.callTool("vector-search", {
+  query: "數據庫操作",
+  type: "class",
+  projectName: "my-project"
+});
 
-# Or use the convenience script (you'll need to update it to include authentication parameters)
-npm run dev:with-params
+// 按引用關係過濾
+const refResults = await mcpClient.callTool("vector-search", {
+  query: "用戶管理",
+  references: ["src/models/User.ts"],
+  projectName: "my-project"
+});
 ```
 
-### Chroma DB Setup
+### 生成項目概覽
 
-For the vector database functionality, you need a running Chroma DB server. You can run it using Docker:
-
-```bash
-docker run -p 8000:8000 chromadb/chroma
+```typescript
+await mcpClient.callTool("summary-code", {
+  projectDir: "/path/to/your/project",
+  targetDir: "src",
+  outputFile: "docs/overview.md",
+  summaryType: "overview"
+});
 ```
 
-Alternatively, you can install and run Chroma locally following the [official documentation](https://docs.trychroma.com/getting-started).
+### 清除向量數據庫
 
-### Run the application
-
-```bash
-npm start
+```typescript
+await mcpClient.callTool("vector-clear", {
+  projectName: "my-project"
+});
 ```
 
-### Development mode
+### 使用資源查詢
 
-To run the application in development mode with automatic restarting:
-
-```bash
-npm run dev
+```typescript
+// 使用資源進行自然語言查詢
+const resourceResult = await mcpClient.getResource("chroma://query/視頻處理相關的代碼");
 ```
 
-Or with file watching:
-
-```bash
-npm run watch
-```
-
-### Testing
-
-This project uses Jest for testing. Run all tests with:
-
-```bash
-npm test
-```
-
-#### Chroma Vector Database Testing
-
-我们提供了两种不同的测试方法来测试Chroma向量数据库功能：
-
-1. **实际连接测试** (chroma.test.ts):
-```bash
-npm run test:chroma
-```
-此测试使用实际的Chroma数据库连接和OpenAI API进行测试，确保在真实环境中功能正常工作。
-运行此测试需要：
-   - 设置`OPENAI_API_KEY`环境变量
-   - 本地运行Chroma服务器 (默认：http://localhost:8000)
-
-   ```bash
-   # 设置环境变量并运行测试
-   OPENAI_API_KEY=your_api_key npm run test:chroma
-   ```
-
-2. **模拟测试** (chroma.spec.ts):
-```bash
-npm run test:chroma:spec
-```
-此测试使用模拟(mock)实现而不需要实际的数据库连接或API密钥，适合快速验证和CI/CD环境。
-
-## Using the MCP Server
-
-The MCP server exposes the following resources and tools:
-
-### Resources
-
-- **Project Structure** (`project://{projectPath}`): Get the file structure of a project, respecting .gitignore patterns
-  - Parameters:
-    - `projectPath`: Path to the project root directory
-
-- **Vector Documents** (`vector://projects/{projectName}/documents`): Query code documentation stored in the vector database
-  - URL Parameters:
-    - `projectName`: Project name (corresponds to Chroma collection name)
-  - Query Parameters:
-    - `type` (optional): Filter by document type (`class` or `function`)
-    - `name` (optional): Filter by class or function name
-    - `namespace` (optional): Filter by namespace or path
-    - `query` (optional): Text search query for similarity search
-    - `limit` (optional): Maximum number of results to return (default: 10)
-  - Examples:
-    ```
-    # Get all class documents in a specific namespace
-    vector://projects/my-project/documents?type=class&namespace=app.repositories
-
-    # Search for documents related to authentication
-    vector://projects/my-project/documents?query=authentication
-
-    # Get a specific function document
-    vector://projects/my-project/documents?type=function&name=calculateTax
-    ```
-
-- **Project Code Query** (`chroma://query/{queryString}`): Use natural language to query project code entities and documentation
-  - URL Parameters:
-    - `queryString`: The natural language query string
-  - Examples:
-    ```
-    # Find video-related model classes
-    chroma://query/视频模型相关的代码
-
-    # Find user repository implementations
-    chroma://query/用户仓储实现
-
-    # Find authentication services
-    chroma://query/认证服务
-
-    # Find database connection code
-    chroma://query/数据库连接
-
-    # Find API controllers
-    chroma://query/API 控制器
-    ```
-  - Supports both Chinese and English queries
-  - Returns relevant code snippets, documentation, and usage examples
-
-### Tools
-
-- **Analyze File**: Analyze the content and purpose of a file
-  - Parameters:
-    - `filePath`: Path to the file to analyze
-
-- **Summarize Project**: Generate a summary of the project structure and key files, respecting .gitignore patterns
-  - Parameters:
-    - `projectPath`: Path to the project root
-    - `maxDepth` (optional): Maximum depth to traverse (default: 3)
-
-- **LangChain Demo**: Demonstrates LangChain integration for text generation
-  - Parameters:
-    - `prompt`: The text prompt to send to the language model
-  - Requirements:
-    - OpenAI API key must be provided via the `--openai-api-key` parameter
-
-  - **Vector Database Tools**: Store and search code documentation using semantic vector search
-  - **Vector Add** (`vector-add`): Add class or function documentation to the vector database
-    - Parameters:
-      - `type`: Document type (`class` or `function`)
-      - `name`: The full name of the class or function
-      - `namespace` (optional): The namespace or path of the class or function
-      - `text`: The documentation content (should include summary and usage examples)
-      - `projectName`: The project name (used as collection name)
-      - `metadata` (optional): Additional metadata for the document
-    - Example:
-      ```json
-      {
-        "type": "class",
-        "name": "UserRepository",
-        "namespace": "app.repositories",
-        "text": "負責用戶數據的CRUD操作。使用範例：const userRepo = new UserRepository(); const user = await userRepo.findById(123);",
-        "projectName": "my-project"
-      }
-      ```
-  - **Vector Search** (`vector-search`): Search for documentation using semantic search
-    - Parameters:
-      - `query`: The search query text
-      - `projectName`: The project name to search in
-      - `type` (optional): Filter by document type (`class` or `function`)
-      - `name` (optional): Filter by class or function name
-      - `namespace` (optional): Filter by namespace or path
-    - Examples:
-      ```json
-      // Basic search
-      {
-        "query": "如何處理用戶驗證",
-        "projectName": "my-project"
-      }
-
-      // Filtered search
-      {
-        "query": "數據庫操作",
-        "type": "class",
-        "namespace": "app.repositories",
-        "projectName": "my-project"
-      }
-      ```
-  - **Summary Code** (`summary-code`): Generate project overview documents
-    - Parameters:
-      - `projectDir`: Project root directory's absolute path
-      - `targetDir`: Target directory to analyze (relative to project root)
-      - `outputFile` (optional): Output file path (relative to project root, defaults to 'overview.md')
-      - `summaryType`: Type of summary to generate (currently only 'overview' is supported)
-    - Example:
-      ```json
-      {
-        "projectDir": "/path/to/project",
-        "targetDir": "src",
-        "outputFile": "docs/overview.md",
-        "summaryType": "overview"
-      }
-      ```
-  - **Vector Clear** (`vector-clear`): Clear a vector database collection
-    - Parameters:
-      - `projectName` (optional): The project name (collection) to clear (defaults to current project)
-    - Example:
-      ```json
-      {
-        "projectName": "my-project"
-      }
-      ```
-  - Requirements:
-    - OpenAI API key must be provided via the `--openai-api-key` parameter
-    - Chroma DB server running (can be specified via the `--chroma-server-url` parameter, defaults to http://localhost:8000)
-
-## Connecting to the Server
-
-The server uses the stdio transport by default, which means it communicates through standard input and output. You can connect to it using any MCP client that supports stdio transport.
-
-Example using the MCP Inspector:
-
-```bash
-# Basic connection
-npx -- @modelcontextprotocol/inspector connect --stdio "node dist/index.js"
-
-# With parameters
-npx -- @modelcontextprotocol/inspector connect --stdio "node dist/index.js --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN"
-```
-
-You can also use the test:inspector script which is already set up in package.json:
-
-```bash
-npm run test:inspector -- --openai-api-key YOUR_API_KEY --chroma-server-url http://localhost:8000 --auth-token YOUR_AUTH_TOKEN
-```
-
-## Project Structure
-
-```
-mcp-project-overview/
-├── dist/                  # Compiled JavaScript files
-├── src/                   # TypeScript source files
-│   ├── cmd/               # Command implementations
-│   │   └── generateOverview.ts # Generates project overview documents
-│   ├── domain/            # Domain models and repositories
-│   │   ├── model/         # Domain model definitions
-│   │   │   └── overview.ts # Defines Overview model for code entities
-│   │   └── repository/    # Repository implementations
-│   ├── infrastructure/    # Infrastructure layer implementations
-│   ├── procedure/         # Procedure execution framework
-│   │   ├── code-overview/ # Overview-specific procedures
-│   │   │   └── codeOverviewCtx.ts # Context for overview procedures
-│   │   └── procedure.ts   # Core procedure execution framework
-│   ├── query/             # Query implementations
-│   │   └── vector-search.ts # Vector search functionality
-│   ├── utils/             # Utility functions
-│   │   ├── chroma.ts      # Handles interactions with ChromaDB vector database
-│   │   ├── fileProcessing.ts # File reading/writing and processing utilities
-│   │   ├── langchain.ts   # OpenAI model initialization
-│   │   └── logger.ts      # Logging configuration
-│   └── index.ts           # Main entry point with MCP server implementation
-├── .gitignore             # Git ignore patterns for files to exclude from version control
-├── .prettierrc            # Prettier configuration
-├── .prettierignore        # Files to be ignored by Prettier
-├── package.json           # Project dependencies and scripts
-├── tsconfig.json          # TypeScript configuration
-└── README.md              # Project documentation
-```
-
-## Dependencies
-
-- [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk): SDK for implementing MCP servers and clients
-- [LangChain.js](https://js.langchain.com/): Framework for developing applications powered by language models
-- [@langchain/openai](https://js.langchain.com/docs/integrations/chat/openai): OpenAI integration for LangChain
-- [@langchain/community](https://js.langchain.com/docs/integrations/vectorstores/chroma): Community integrations for LangChain
-- [Chroma](https://www.trychroma.com/): Vector database for storing and retrieving embeddings
-- TypeScript: For type-safe JavaScript development
-- Other standard Node.js libraries
-
-## License
-
-ISC
