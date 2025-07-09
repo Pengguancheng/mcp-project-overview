@@ -8,7 +8,7 @@ import {
   searchSimilarDocuments,
 } from './utils/chroma';
 import logger from './utils/logger';
-import { generateProjectOverview } from './cmd/generateOverview';
+import { generateProjectOverview, OVERVIEW_SCHEMA } from './cmd/generateOverview';
 import * as path from 'path';
 import { Overview, OverviewType } from './domain/model/overview';
 import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
@@ -44,29 +44,7 @@ server.registerTool(
     title: 'Vector Add',
     description:
       '將代碼文檔添加到向量數據庫。使用此工具存儲類和函數的文檔信息，包括其名稱、命名空間、類型(class/interface/function)以及使用方法描述。references 參數用於記錄被該檔案引用的其他檔案、類別或路徑。範例：{"type":"class", "name":"UserRepository", "namespace":"app.repositories", "text":"負責用戶數據的CRUD操作...", "projectName":"my-project", "filePath":"/path/to/file.ts", "references":["src/models/User.ts", "app.services.Database", "@langchain/core"]}',
-    inputSchema: {
-      text: z.string().describe('文檔內容，應包含類或函數的摘要和使用方式'),
-      type: z.string().describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
-      name: z
-        .string()
-        .describe(
-          '類或函數的完整名稱 ex: model.Video, VideoSystem.Domain.Repository.UserRepository'
-        ),
-      namespace: z
-        .string()
-        .optional()
-        .describe('類或函數的命名空間或路徑 ex: repository, VideoSystem.Domain.Repository'),
-      filePath: z
-        .string()
-        .describe(
-          '項目內檔案路徑，作為文檔的唯一標識符，如果提供則會覆蓋同路徑的文檔 ex: project: strategy-summary, path: strategy-summary/domain/repository/overview_summary.go'
-        ),
-      summary: z.string().describe('文檔的內文摘要'),
-      references: z
-        .array(z.string())
-        .optional()
-        .describe('被該檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
-    },
+    inputSchema: OVERVIEW_SCHEMA,
   },
   async param => {
     try {

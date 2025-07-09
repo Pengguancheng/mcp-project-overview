@@ -7,17 +7,17 @@ import { CodeOverviewCtx } from '../procedure/code-overview/codeOverviewCtx';
 import { Procedure } from '../procedure/procedure';
 import { UpdateChromaProcess } from '../procedure/code-overview/updateChromaProcess';
 import * as fs from 'fs';
-import { z } from 'zod';
+import { z, ZodRawShape } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 // 定义 Overview schema
-export const OVERVIEW_SCHEMA = {
+export const OVERVIEW_SCHEMA: ZodRawShape = {
   text: z
     .string()
     .describe(
-      '類別、接口或函數的說明文，需包含清楚的功能摘要、用途介紹，以及常見的使用情境範例，內容不可為空。應讓讀者僅憑該欄即可理解此元素的作用與基本用法。'
+      '類別、接口或函數的說明文，需包含清楚的功能摘要、用途介紹，以及常見的使用情境範例，內容不可為空。應讓讀者僅憑該欄即可理解此程式的作用與基本用法。'
     ),
-  type: z.string().describe('文檔類型，可以是類、接口或函數 ex: class, interface, function'),
+  type: z.string().describe('程式類型，可以是類、接口或函數 ex: class, interface, function'),
   name: z
     .string()
     .describe('類或函數的完整名稱 ex: model.Video, VideoSystem.Domain.Repository.UserRepository'),
@@ -38,7 +38,7 @@ export const OVERVIEW_SCHEMA = {
   references: z
     .array(z.string())
     .optional()
-    .describe('被該檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
+    .describe('被該程式檔案引用的元素列表，可包含檔案路徑、命名空間、類別名稱或導入路徑'),
 };
 
 // 收集 schema 各欄位說明
@@ -94,8 +94,9 @@ export async function generateFileOverview(
     const jsonSchema = zodToJsonSchema(zodSchema); // <- 重要
 
     const prompt = ` 
-請分析以下檔案內容，並將其整理成結構化的 overviews 格式。
-
+請分析以下檔案內容，並將其整理成結構化的 overviews 格式。 
+請遵守以下規則
+* 避免對單一 property or column 產生 overview
 檔案路徑: ${filePath}
 專案名稱: ${projectName}
 檔案內容:
