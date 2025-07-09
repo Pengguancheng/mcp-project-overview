@@ -15,6 +15,7 @@ import { CodeOverviewCtx } from './procedure/code-overview/codeOverviewCtx';
 import { Procedure } from './procedure/procedure';
 import { UpdateChromaProcess } from './procedure/code-overview/updateChromaProcess';
 import * as querystring from 'node:querystring';
+import { buildVectorSearchFilter, formatSearchResults } from './query/vector-search';
 
 // Get OpenAI API key from environment variable
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -98,11 +99,12 @@ server.registerTool(
   {
     title: 'Vector Search',
     description:
-      '通过语义搜索查找项目代码文档。支持自然语言查询来搜索相关的类、函数、接口等代码实体。可以按以下方式使用：\n' +
+      '執行語意搜尋，可依型別、名稱、命名空間與引用關係過濾結果。支持自然语言查询来搜索相关的类、函数、接口等代码实体。可以按以下方式使用：\n' +
       '1. 自然语言查询：{"query":"用户认证相关的代码", "projectName":"my-project"}\n' +
       '2. 功能性查询：{"query":"数据库操作", "projectName":"my-project"}\n' +
       '3. 特定类型查询：{"query":"视频处理", "type":"class", "projectName":"my-project"}\n' +
       '4. 命名空间过滤：{"query":"仓储模式", "namespace":"repository", "projectName":"my-project"}\n' +
+      '5. 引用關係過濾：{"query":"用戶管理", "references":["src/models/User.ts", "app.services.Database"], "projectName":"my-project"}\n' +
       '支持的查询类型包括：功能描述、设计模式、技术实现、业务逻辑等。',
     inputSchema: {
       query: z.string().describe('自然语言搜索查询，可以是功能描述、技术关键词或业务需求'),
@@ -112,36 +114,64 @@ server.registerTool(
         .describe('过滤代码实体类型：class(类)、interface(接口)、function(函数)'),
       name: z.string().optional().describe('过滤特定的类名或函数名'),
       namespace: z.string().optional().describe('过滤特定的命名空间、包名或目录路径'),
+      references: z
+        .array(z.string())
+        .optional()
+        .describe('引用關係過濾，可指定多個引用元素，例如檔案路徑、命名空間、類別名稱或導入路徑'),
+      limit: z.number().optional().default(5).describe('返回結果數量限制，預設為 5'),
     },
   },
   async param => {
     try {
-      logger.info(`vector-search: received params: ${JSON.stringify(param)}`);
+      const { query, type, name, namespace, references, limit = 5 } = param;
+      const projectName = PROJECT_NAME;
 
-      // Initialize OpenAI embeddings
-      const embeddings = initializeOpenAIEmbeddings(OPENAI_API_KEY);
+      // 初始化 ChromaDB 連接
+      const ctx = await CodeOverviewCtx.from(projectName, OPENAI_API_KEY);
 
-      logger.info(`vector-search: initializing Chroma store for project: ${PROJECT_NAME}`);
+      if (!ctx.chroma) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'ChromaDB 連接失敗，請確認服務是否啟動',
+            },
+          ],
+        };
+      }
 
-      // Initialize Chroma store with project name as collection name
-      const chromaStore = await initializeChromaStore(embeddings, PROJECT_NAME);
+      // 構建查詢過濾器
+      const filter = buildVectorSearchFilter({
+        type,
+        name,
+        namespace,
+        references,
+        projectName,
+      });
 
-      logger.info(`vector-search: searching similar documents for query: "${param.query}"`);
-      // Search for similar documents
-      const results = await searchSimilarDocuments(chromaStore, param.query);
+      // 執行語意搜尋
+      const results = await searchSimilarDocuments(ctx.chroma, query, limit, filter);
 
-      logger.info(`vector-search: found ${results.length} results in collection "${PROJECT_NAME}"`);
+      // 格式化結果
+      const formattedResults = formatSearchResults(results);
 
       return {
         content: [
-          { type: 'text', text: 'Search results:' },
-          { type: 'text', text: JSON.stringify(results) },
+          {
+            type: 'text',
+            text: `找到 ${results.length} 個相關結果：\n\n${formattedResults}`,
+          },
         ],
       };
-    } catch (error: any) {
-      logger.error('Chroma search error:', error);
+    } catch (error) {
+      logger.error('向量搜尋錯誤:', error);
       return {
-        content: [{ type: 'text', text: `Error: ${error?.message || 'Unknown error occurred'}` }],
+        content: [
+          {
+            type: 'text',
+            text: `搜尋失敗: ${(error as any).message}`,
+          },
+        ],
       };
     }
   }
