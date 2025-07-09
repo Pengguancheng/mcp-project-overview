@@ -89,6 +89,8 @@ The server supports token-based authentication. You must either provide an authe
 You can also set these options using environment variables:
 - `AUTH_TOKEN`: Set to your authentication token
 - `DANGEROUSLY_OMIT_AUTH`: Set to "true" to disable authentication
+- `OPENAI_API_KEY`: Your OpenAI API key for LangChain and vector embeddings
+- `PROJECT_NAME`: The project name used for Chroma collections and vector operations
 
 When authentication is enabled, clients must include the `auth_token` parameter in their requests:
 
@@ -223,6 +225,29 @@ The MCP server exposes the following resources and tools:
     vector://projects/my-project/documents?type=function&name=calculateTax
     ```
 
+- **Project Code Query** (`chroma://query/{queryString}`): Use natural language to query project code entities and documentation
+  - URL Parameters:
+    - `queryString`: The natural language query string
+  - Examples:
+    ```
+    # Find video-related model classes
+    chroma://query/视频模型相关的代码
+
+    # Find user repository implementations
+    chroma://query/用户仓储实现
+
+    # Find authentication services
+    chroma://query/认证服务
+
+    # Find database connection code
+    chroma://query/数据库连接
+
+    # Find API controllers
+    chroma://query/API 控制器
+    ```
+  - Supports both Chinese and English queries
+  - Returns relevant code snippets, documentation, and usage examples
+
 ### Tools
 
 - **Analyze File**: Analyze the content and purpose of a file
@@ -282,6 +307,30 @@ The MCP server exposes the following resources and tools:
         "projectName": "my-project"
       }
       ```
+  - **Summary Code** (`summary-code`): Generate project overview documents
+    - Parameters:
+      - `projectDir`: Project root directory's absolute path
+      - `targetDir`: Target directory to analyze (relative to project root)
+      - `outputFile` (optional): Output file path (relative to project root, defaults to 'overview.md')
+      - `summaryType`: Type of summary to generate (currently only 'overview' is supported)
+    - Example:
+      ```json
+      {
+        "projectDir": "/path/to/project",
+        "targetDir": "src",
+        "outputFile": "docs/overview.md",
+        "summaryType": "overview"
+      }
+      ```
+  - **Vector Clear** (`vector-clear`): Clear a vector database collection
+    - Parameters:
+      - `projectName` (optional): The project name (collection) to clear (defaults to current project)
+    - Example:
+      ```json
+      {
+        "projectName": "my-project"
+      }
+      ```
   - Requirements:
     - OpenAI API key must be provided via the `--openai-api-key` parameter
     - Chroma DB server running (can be specified via the `--chroma-server-url` parameter, defaults to http://localhost:8000)
@@ -312,12 +361,25 @@ npm run test:inspector -- --openai-api-key YOUR_API_KEY --chroma-server-url http
 mcp-project-overview/
 ├── dist/                  # Compiled JavaScript files
 ├── src/                   # TypeScript source files
-│   ├── index.ts           # Main entry point with MCP server implementation
-│   └── utils/             # Utility functions
-│       ├── gitignore.ts   # Utilities for handling .gitignore patterns
-│       ├── projectStructure.ts # Project structure analysis utilities
-│       ├── langchain.ts   # LangChain integration utilities
-│       └── chroma.ts      # Chroma vector database utilities
+│   ├── cmd/               # Command implementations
+│   │   └── generateOverview.ts # Generates project overview documents
+│   ├── domain/            # Domain models and repositories
+│   │   ├── model/         # Domain model definitions
+│   │   │   └── overview.ts # Defines Overview model for code entities
+│   │   └── repository/    # Repository implementations
+│   ├── infrastructure/    # Infrastructure layer implementations
+│   ├── procedure/         # Procedure execution framework
+│   │   ├── code-overview/ # Overview-specific procedures
+│   │   │   └── codeOverviewCtx.ts # Context for overview procedures
+│   │   └── procedure.ts   # Core procedure execution framework
+│   ├── query/             # Query implementations
+│   │   └── vector-search.ts # Vector search functionality
+│   ├── utils/             # Utility functions
+│   │   ├── chroma.ts      # Handles interactions with ChromaDB vector database
+│   │   ├── fileProcessing.ts # File reading/writing and processing utilities
+│   │   ├── langchain.ts   # OpenAI model initialization
+│   │   └── logger.ts      # Logging configuration
+│   └── index.ts           # Main entry point with MCP server implementation
 ├── .gitignore             # Git ignore patterns for files to exclude from version control
 ├── .prettierrc            # Prettier configuration
 ├── .prettierignore        # Files to be ignored by Prettier
