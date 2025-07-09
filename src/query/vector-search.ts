@@ -72,19 +72,11 @@ export function buildVectorSearchFilter(options: {
 }
 
 // 格式化搜尋結果
+// 格式化搜尋結果
 export function formatSearchResults(results: Document[]): string {
   return results
     .map((doc, index) => {
-      const metadata = doc.metadata;
-      const content = JSON.parse(doc.pageContent);
-
-      return `**${index + 1}. ${metadata.name}** (${metadata.type})
-📁 檔案路徑: ${metadata.filePath}
-🔗 命名空間: ${metadata.namespace || '無'}
-📝 摘要: ${metadata.summary}
-🔗 引用: ${metadata.references || '無'}
-💡 內容: ${content.text?.substring(0, 200)}...
-📏 相似度距離: ${doc.metadata.distance || 'N/A'}`;
+      return doc.pageContent;
     })
     .join('\n\n');
 }

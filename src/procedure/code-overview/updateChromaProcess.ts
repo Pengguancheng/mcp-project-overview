@@ -26,19 +26,21 @@ export class UpdateChromaProcess extends BaseProcess implements IProUpdateChroma
 
       // 将 Overview 对象转换为 Document 对象
       const documents = ctx.overviews.map(overview => {
-        const meta = {
-          id: overview.id,
-          name: overview.name,
-          projectName: overview.projectName,
-          filePath: overview.filePath,
-          type: overview.contentType,
-          references: overview.references.join(','),
-          summary: overview.summary,
-        };
-
         return new Document({
-          pageContent: JSON.stringify({ ...meta, content: overview.content }),
-          metadata: meta,
+          pageContent: `**${overview.name}** (${overview.contentType})
+          檔案路徑: ${overview.filePath}
+          摘要: ${overview.summary}
+          引用: ${overview.references.length > 0 ? overview.references.join(', ') : '無'}
+          內容: ${overview.content}
+          `,
+          metadata: {
+            id: overview.id,
+            name: overview.name,
+            projectName: overview.projectName,
+            filePath: overview.filePath,
+            type: overview.contentType,
+            references: overview.references.join(','),
+          },
         });
       });
 
