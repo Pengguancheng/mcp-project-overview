@@ -112,11 +112,11 @@ ${fileContent.trim()}
 
 ${generateOverviewPrompt()}
 `;
-    logger.info(`LLM prompt: ${prompt}`);
+    logger.debug(`LLM prompt: ${prompt}`);
 
     const response = await llm.withStructuredOutput(jsonSchema).invoke(prompt);
 
-    logger.info(`LLM 響應: ${JSON.stringify(response)}`);
+    logger.debug(`LLM 響應: ${JSON.stringify(response)}`);
 
     // 使用 Zod schema 驗證解析的結果
     const validatedSchema = zodSchema.parse(response);
@@ -162,7 +162,7 @@ export async function generateProjectOverview(
     );
 
     // Generate summaries for each file in parallel
-    logger.info(`Summarizing each file in parallel for overview...`);
+    logger.info(`Summarizing each file in parallel for overview...`, filePaths.join('\n'));
     const summaryPromises = filePaths.map(async filePath => {
       return await generateFileOverview(apiKey, projectName, filePath);
     });
