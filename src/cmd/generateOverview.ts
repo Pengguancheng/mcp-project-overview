@@ -153,16 +153,13 @@ export async function generateProjectOverview(
     // Resolve target directory as absolute path
     const absoluteTargetDir = path.resolve(projectDir, targetDir);
 
-    // Load all files from the target directory
-    const allDocs = await loadFilesFromDirectory(absoluteTargetDir);
-
-    // Group documents by source file
-    const docsBySource = groupDocumentsBySource(allDocs);
+    // Load all file paths from the target directory
+    const filePaths = await loadFilesFromDirectory(absoluteTargetDir);
 
     // Generate summaries for each file in parallel
     logger.info(`Summarizing each file in parallel for overview...`);
-    const summaryPromises = Object.entries(docsBySource).map(async ([src, docs]) => {
-      return await generateFileOverview(apiKey, projectName, src);
+    const summaryPromises = filePaths.map(async filePath => {
+      return await generateFileOverview(apiKey, projectName, filePath);
     });
 
     // Wait for all summaries to complete

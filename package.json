@@ -44,7 +44,9 @@
     "@langchain/core": "^0.3.62",
     "@langchain/openai": "^0.5.18",
     "@modelcontextprotocol/sdk": "^1.15.0",
+    "@types/glob": "^8.1.0",
     "chromadb": "^1.10.5",
+    "glob": "^11.0.3",
     "langchain": "^0.3.29",
     "winston": "^3.11.0",
     "zod-to-json-schema": "^3.24.6"

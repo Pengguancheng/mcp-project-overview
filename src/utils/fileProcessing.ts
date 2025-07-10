@@ -2,34 +2,44 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Document } from '@langchain/core/documents';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { DirectoryLoader } from 'langchain/document_loaders/fs/directory';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { loadSummarizationChain } from 'langchain/chains';
 import { ChatOpenAI } from '@langchain/openai';
 import logger from './logger';
+import { glob } from 'glob';
 
 // Load all files from a directory
 export async function loadFilesFromDirectory(
   targetDir: string,
-  globPattern: string = '**/*.{md,ts,js,go,cs}'
-): Promise<Document[]> {
+  pattern: string = '**/*.{md,ts,tsx,js,jsx,go,cs,java}',
+  ignore: string[] = ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**']
+): Promise<string[]> {
   logger.info(`Loading files from ${targetDir}...`);
 
-  const loader = new DirectoryLoader(
-    targetDir,
-    {
-      '.md': path => new TextLoader(path),
-      '.ts': path => new TextLoader(path),
-      '.js': path => new TextLoader(path),
-      '.go': path => new TextLoader(path),
-      '.cs': path => new TextLoader(path),
-      '.proto': path => new TextLoader(path),
-    },
-    true,
-    'ignore'
-  );
+  try {
+    // Use glob to find files matching the pattern
+    const files = await glob(pattern, {
+      cwd: targetDir,
+      absolute: true,
+      ignore: ignore,
+    });
 
-  return await loader.load();
+    // Filter out directories and ensure we only have files
+    const validFiles = files.filter(file => {
+      try {
+        const stats = fs.statSync(file);
+        return stats.isFile();
+      } catch (error) {
+        logger.warn(`Cannot access file: ${file}`);
+        return false;
+      }
+    });
+
+    logger.info(`Found ${validFiles.length} files matching pattern ${pattern}`);
+    return validFiles;
+  } catch (error) {
+    logger.error(`Error loading files from ${targetDir}:`, error);
+    throw error;
+  }
 }
 
 // Group documents by source file
@@ -77,6 +87,31 @@ export async function generateFileSummary(
   });
 
   return text.trim();
+}
+
+// Create documents from file paths
+export function createDocumentsFromFilePaths(filePaths: string[]): Document[] {
+  const documents: Document[] = [];
+
+  for (const filePath of filePaths) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const document = new Document({
+        pageContent: content,
+        metadata: {
+          source: filePath,
+          extension: path.extname(filePath),
+          basename: path.basename(filePath),
+          dirname: path.dirname(filePath),
+        },
+      });
+      documents.push(document);
+    } catch (error) {
+      logger.warn(`Cannot read file: ${filePath}`, error);
+    }
+  }
+
+  return documents;
 }
 
 // Read existing overview file
