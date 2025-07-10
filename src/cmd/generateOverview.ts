@@ -147,14 +147,19 @@ export async function generateProjectOverview(
   projectDir: string,
   targetDir: string,
   apiKey: string,
-  projectName: string
+  projectName: string,
+  ignoreDirs: string[]
 ): Promise<void> {
   try {
     // Resolve target directory as absolute path
     const absoluteTargetDir = path.resolve(projectDir, targetDir);
 
     // Load all file paths from the target directory
-    const filePaths = await loadFilesFromDirectory(absoluteTargetDir);
+    const filePaths = await loadFilesFromDirectory(
+      absoluteTargetDir,
+      '**/*.{md,ts,tsx,js,jsx,go,cs,java}',
+      ignoreDirs
+    );
 
     // Generate summaries for each file in parallel
     logger.info(`Summarizing each file in parallel for overview...`);

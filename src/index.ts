@@ -196,6 +196,10 @@ server.registerTool(
         .enum(['overview'])
         .default('overview')
         .describe('摘要类型：overview（项目概览）'),
+      ignoreDirs: z
+        .array(z.string())
+        .optional()
+        .describe('要忽略的目录或文件模式列表，例如 ["**/node_modules/**", "**/*.pb.go"]'),
     },
   },
   async param => {
@@ -227,11 +231,20 @@ server.registerTool(
       logger.info(`generate-overview: analyzing directory ${targetDir}, output to ${outputFile}`);
 
       // 生成项目概览
+      const ignoreDirs = [
+        ...(param.ignoreDirs ?? []),
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/build/**',
+        '**/.git/**',
+        '**/*.pb.go',
+      ];
       await generateProjectOverview(
         projectDir,
         param.targetDir,
         OPENAI_API_KEY,
-        PROJECT_NAME
+        PROJECT_NAME,
+        ignoreDirs
       ).catch(error => {
         logger.error('Generate overview error:', error);
       });

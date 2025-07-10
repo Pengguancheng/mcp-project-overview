@@ -11,7 +11,7 @@ import { glob } from 'glob';
 export async function loadFilesFromDirectory(
   targetDir: string,
   pattern: string = '**/*.{md,ts,tsx,js,jsx,go,cs,java}',
-  ignore: string[] = ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**']
+  ignore: string[] = ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**', '**/*.pb.go']
 ): Promise<string[]> {
   logger.info(`Loading files from ${targetDir}...`);
 
